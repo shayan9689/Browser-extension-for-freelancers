@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   isExtensionResponse,
+  isGetJobPostRequest,
   isPingRequest,
   type PingRequest,
   type PingResponse,
@@ -18,6 +19,14 @@ describe('messages helpers', () => {
     expect(isPingRequest('PING')).toBe(false);
   });
 
+  it('accepts GET_JOB_POST requests', () => {
+    expect(isGetJobPostRequest({ type: 'GET_JOB_POST' })).toBe(true);
+    expect(
+      isGetJobPostRequest({ type: 'GET_JOB_POST', preferSelection: true }),
+    ).toBe(true);
+    expect(isGetJobPostRequest({ type: 'PING' })).toBe(false);
+  });
+
   it('accepts PING_RESULT and CONTENT_ERROR responses', () => {
     const ok: PingResponse = {
       type: 'PING_RESULT',
@@ -30,6 +39,12 @@ describe('messages helpers', () => {
         type: 'CONTENT_ERROR',
         code: 'NO_CONTENT_SCRIPT',
         message: 'missing',
+      }),
+    ).toBe(true);
+    expect(
+      isExtensionResponse({
+        type: 'JOB_POST_ERROR',
+        error: { code: 'NOT_A_JOB_PAGE', message: 'nope' },
       }),
     ).toBe(true);
   });

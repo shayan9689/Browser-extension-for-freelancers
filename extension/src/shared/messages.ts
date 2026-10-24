@@ -1,8 +1,8 @@
+import type { ExtractError, JobPost } from './types';
+
 /** Discriminated union of extension messages — zero `any`. */
 
-export type PingRequest = {
-  type: 'PING';
-};
+export type PingRequest = { type: 'PING' };
 
 export type PingResponse = {
   type: 'PING_RESULT';
@@ -10,14 +10,26 @@ export type PingResponse = {
   url: string;
 };
 
+export type GetJobPostRequest = {
+  type: 'GET_JOB_POST';
+  preferSelection?: boolean;
+};
+
+export type GetJobPostResponse =
+  | { type: 'JOB_POST'; job: JobPost }
+  | { type: 'JOB_POST_ERROR'; error: ExtractError };
+
 export type ContentErrorResponse = {
   type: 'CONTENT_ERROR';
   code: 'NO_CONTENT_SCRIPT' | 'UNKNOWN';
   message: string;
 };
 
-export type ExtensionRequest = PingRequest;
-export type ExtensionResponse = PingResponse | ContentErrorResponse;
+export type ExtensionRequest = PingRequest | GetJobPostRequest;
+export type ExtensionResponse =
+  | PingResponse
+  | GetJobPostResponse
+  | ContentErrorResponse;
 
 export function isPingRequest(msg: unknown): msg is PingRequest {
   return (
@@ -28,10 +40,24 @@ export function isPingRequest(msg: unknown): msg is PingRequest {
   );
 }
 
+export function isGetJobPostRequest(msg: unknown): msg is GetJobPostRequest {
+  return (
+    typeof msg === 'object' &&
+    msg !== null &&
+    'type' in msg &&
+    (msg as { type: unknown }).type === 'GET_JOB_POST'
+  );
+}
+
 export function isExtensionResponse(msg: unknown): msg is ExtensionResponse {
   if (typeof msg !== 'object' || msg === null || !('type' in msg)) return false;
   const type = (msg as { type: unknown }).type;
-  return type === 'PING_RESULT' || type === 'CONTENT_ERROR';
+  return (
+    type === 'PING_RESULT' ||
+    type === 'CONTENT_ERROR' ||
+    type === 'JOB_POST' ||
+    type === 'JOB_POST_ERROR'
+  );
 }
 
 /**
@@ -63,7 +89,21 @@ export async function sendToActiveTab(
       type: 'CONTENT_ERROR',
       code: 'NO_CONTENT_SCRIPT',
       message:
-        'This page has no ProposalPilot content script. Open a supported freelance job site.',
+        'This page has no ProposalPilot content script. Open a supported freelance job site, or use selected text.',
     };
   }
+}
+
+/** Read selected text via scripting.executeScript (activeTab). */
+export async function getSelectedTextFromActiveTab(): Promise<string> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tab?.id === undefined) return '';
+
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: () => window.getSelection()?.toString() ?? '',
+  });
+
+  const first = results[0]?.result;
+  return typeof first === 'string' ? first : '';
 }

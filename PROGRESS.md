@@ -4,7 +4,7 @@
 |------:|------|--------|------|-------|--------------|
 | 0 | Project setup and ground rules | done | 2026-10-24 | README, PRD, PROGRESS, Cursor rules, layout | — |
 | 1 | Extension scaffold | done | 2026-10-24 | WXT+React side panel, typed PING, lint/typecheck/test/build green | Load unpacked for manual ping check |
-| 2 | Job post detection and extraction | pending | | | |
+| 2 | Job post detection and extraction | done | 2026-10-24 | Adapters + fixtures + selection fallback; 11 tests green | Real-site manual check still recommended |
 | 3 | Backend API (fake LLM) | pending | | | |
 | 4 | Real proposal generation | pending | | | |
 | 5 | Side panel UI | pending | | | |
