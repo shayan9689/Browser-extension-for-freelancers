@@ -2,15 +2,18 @@
   "name": "proposalpilot-extension",
   "description": "Drafts a tailored freelance proposal from the job post you are viewing. You review and send.",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "wxt",
     "build": "wxt build",
     "zip": "wxt zip",
+    "verify-zip": "node scripts/verify-zip.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:e2e": "playwright test",
+    "check:fixtures": "node scripts/check-fixtures.mjs",
     "icons": "node scripts/generate-icons.mjs",
     "postinstall": "wxt prepare"
   },
@@ -22,6 +25,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/vite": "^4.1.14",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",

@@ -9,7 +9,7 @@ export default defineConfig({
   }),
   manifest: {
     name: 'ProposalPilot',
-    version: '0.1.0',
+    version: '1.0.0',
     description:
       'Drafts a tailored freelance proposal from the job post you are viewing. You review and send.',
     permissions: ['storage', 'sidePanel', 'activeTab', 'scripting'],

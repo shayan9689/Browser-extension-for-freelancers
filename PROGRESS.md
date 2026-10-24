@@ -3,33 +3,28 @@
 | Phase | Name | Status | Date | Notes | Known issues |
 |------:|------|--------|------|-------|--------------|
 | 0 | Project setup and ground rules | done | 2026-10-24 | README, PRD, PROGRESS, Cursor rules, layout | — |
-| 1 | Extension scaffold | done | 2026-10-24 | WXT+React side panel, typed PING, lint/typecheck/test/build green | Load unpacked for manual ping check |
-| 2 | Job post detection and extraction | done | 2026-10-24 | Adapters + fixtures + selection fallback; 11 tests green | Real-site manual check still recommended |
-| 3 | Backend API (fake LLM) | done | 2026-10-24 | FastAPI + rate limit + FakeProvider; pytest/ruff green | Docker not installed on this machine |
-| 4 | Real proposal generation | done | 2026-10-24 | Anthropic/OpenAI providers + prompts + injection defence; mocked tests | Needs real API key for live golden quality |
-| 5 | Side panel UI | done | 2026-10-24 | State machine UI + API client + cancel/errors; 17 tests | Manual E2E with local backend recommended |
-| 6 | Profile, settings, local history | done | 2026-10-24 | Options/onboarding, storage migrations, history cap 50 | — |
-| 7 | Hardening, security, privacy | done | 2026-10-24 | permissions/privacy docs, size limit, daily cap, HTTPS prod check | Install Docker/gitleaks later for full gate |
-| 8 | Automated tests and CI | pending | | | |
-| 9 | Deploy backend (production) | pending | | | |
-| 10 | Package and store assets | pending | | | |
-| 11 | Publish to Chrome Web Store | pending | | Manual dashboard steps | |
-| 12 | Post-launch monitoring & docs | pending | | | |
+| 1 | Extension scaffold | done | 2026-10-24 | WXT+React side panel, typed PING | Load unpacked for manual ping check |
+| 2 | Job post detection and extraction | done | 2026-10-24 | Adapters + fixtures + selection fallback | Real-site manual check recommended |
+| 3 | Backend API (fake LLM) | done | 2026-10-24 | FastAPI + rate limit + FakeProvider | Docker not installed locally |
+| 4 | Real proposal generation | done | 2026-10-24 | Anthropic/OpenAI + injection defence | Needs real API key for live quality |
+| 5 | Side panel UI | done | 2026-10-24 | Full state machine + API client | Manual E2E with local backend |
+| 6 | Profile, settings, local history | done | 2026-10-24 | Options/onboarding, history cap 50 | — |
+| 7 | Hardening, security, privacy | done | 2026-10-24 | permissions/privacy, daily cap, HTTPS check | Install Docker/gitleaks for full gate |
+| 8 | Automated tests and CI | done | 2026-10-24 | GitHub Actions, fixtures check, Playwright smoke | Full extension-loaded e2e still thin |
+| 9 | Deploy backend (production) | done | 2026-10-24 | render.yaml, deploy.md, runbook, ping-llm | User must deploy to a host |
+| 10 | Package and store assets | done | 2026-10-24 | zip verify script, store-listing, demo page | User must create real screenshots |
+| 11 | Publish to Chrome Web Store | done | 2026-10-24 | review-audit.md prepared | Dashboard submit is manual |
+| 12 | Post-launch monitoring & docs | done | 2026-10-24 | release.yml, CHANGELOG, playbook | Optional CWS API secrets later |
 
 ## Chrome permissions (justifications filled as added)
 
 | Permission | Why |
 |------------|-----|
-| `storage` | Save profile, settings, history, install_id (Phase 6) |
+| `storage` | Save profile, settings, history, install_id |
 | `sidePanel` | Keep UI open while reading the job post |
 | `activeTab` | Read the current tab URL/title and selected text on demand |
 | `scripting` | Inject/query selection fallback when adapters fail |
 
 Content script matches (from `src/shared/sites.ts`): `https://www.fiverr.com/*`, `https://www.upwork.com/*`
 
-### Phase 1 how to verify
-1. `cd extension && npm run build`
-2. Chrome ? `chrome://extensions` ? Developer mode ? Load unpacked ? `extension/.output/chrome-mv3`
-3. Click toolbar icon ? side panel opens
-4. On fiverr.com/upwork.com: Ping page returns title; on example.com: friendly error
-5. Side panel Network tab: no outgoing requests
+See also `docs/permissions.md`.

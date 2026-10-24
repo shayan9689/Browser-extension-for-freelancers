@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: proposalpilot-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ENV
+        value: production
+      - key: LLM_PROVIDER
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: RATE_LIMIT_PER_HOUR
+        value: "20"
+      - key: DAILY_REQUEST_CAP
+        value: "500"
+      - key: REDIS_URL
+        sync: false
+      - key: ADMIN_PING_SECRET
+        sync: false

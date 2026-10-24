@@ -65,6 +65,20 @@ async def health() -> HealthResponse:
     return HealthResponse(status="ok", version=settings.app_version)
 
 
+@app.get("/v1/ping-llm")
+async def ping_llm(request: Request) -> JSONResponse:
+    settings = request.app.state.settings
+    secret = request.headers.get("x-admin-secret", "")
+    if not settings.admin_ping_secret or secret != settings.admin_ping_secret:
+        return error_json("INVALID_INPUT", "Unauthorized", 401)
+    provider = request.app.state.provider
+    try:
+        _ = provider.generate("Reply with OK", system="Reply with exactly OK")
+        return JSONResponse({"status": "ok"})
+    except Exception:
+        return JSONResponse({"status": "fail"}, status_code=502)
+
+
 @app.post("/v1/proposals", response_model=None)
 async def create_proposal(
     payload: ProposalRequest,

@@ -24,6 +24,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
 
     with TestClient(app) as c:
         c.app.state.limiter.reset()
+        c.app.state.daily_cap.reset()
         yield c
 
     get_settings.cache_clear()
