@@ -1,0 +1,7 @@
+{
+  "title": "Chrome extension bugfix",
+  "description": "MV3 extension side panel fails to open on Edge. Need diagnosis and fix with tests.",
+  "budget_text": null,
+  "skills": ["JavaScript", "Chrome Extensions"],
+  "platform": "generic"
+}

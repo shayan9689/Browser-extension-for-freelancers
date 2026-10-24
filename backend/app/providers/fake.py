@@ -6,9 +6,9 @@ from app.schemas import ProposalRequest
 class FakeProvider:
     """Deterministic provider for tests and LLM_PROVIDER=fake."""
 
-    def generate(self, prompt: str) -> str:
-        # Prompt is unused for determinism; real providers use it in Phase 4.
-        _ = prompt
+    def generate(self, prompt: str, *, system: str = "") -> str:
+        # Prompt/system unused for determinism; real providers use them in Phase 4.
+        _ = (prompt, system)
         payload = {
             "proposal": (
                 "Hi — I can help with this project based on the requirements you shared. "
@@ -32,8 +32,10 @@ class FakeProvider:
         payload = {
             "proposal": (
                 f"Hi — regarding “{detail}”, I can help using {skills}. "
-                "I would start by clarifying scope, then deliver a clean first version "
-                "for your review. What is the must-have for the first milestone?"
+                "I read the requirements carefully and would start by clarifying scope, "
+                "confirming acceptance criteria, then deliver a clean first version with "
+                "short notes so you can review quickly. I keep communication clear and "
+                "share progress checkpoints. What is the must-have for the first milestone?"
             ),
             "suggested_price": {
                 "amount": float(request.profile.hourly_rate or 40) * 8,

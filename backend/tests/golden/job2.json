@@ -1,0 +1,7 @@
+{
+  "title": "Stripe webhooks on FastAPI",
+  "description": "Integrate Stripe webhooks into FastAPI with idempotent handlers and tests.",
+  "budget_text": "Hourly $40-$60",
+  "skills": ["Python", "FastAPI", "Stripe"],
+  "platform": "upwork"
+}

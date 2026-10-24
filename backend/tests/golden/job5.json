@@ -1,0 +1,7 @@
+{
+  "title": "Data cleanup script",
+  "description": "Python script to clean CSV exports, dedupe emails, and output a summary report.",
+  "budget_text": "$150",
+  "skills": ["Python", "pandas"],
+  "platform": "fiverr"
+}
