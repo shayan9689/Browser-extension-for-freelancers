@@ -80,9 +80,13 @@ export default defineContentScript({
     chrome.runtime.onMessage.addListener(
       (
         message: unknown,
-        _sender: chrome.runtime.MessageSender,
+        sender: chrome.runtime.MessageSender,
         sendResponse: (response: ExtensionResponse) => void,
-      ) => handleMessage(message, sendResponse),
+      ) => {
+        // Only accept messages from this extension.
+        if (sender.id !== chrome.runtime.id) return false;
+        return handleMessage(message, sendResponse);
+      },
     );
 
     // Debounced SPA URL watcher — read-only; does not modify the DOM.

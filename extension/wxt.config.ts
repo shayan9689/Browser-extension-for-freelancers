@@ -24,11 +24,19 @@ export default defineConfig({
       '128': 'icon/128.png',
     },
   },
-  // Ensure content script matches stay in sync with sites.ts (used by content entry)
   hooks: {
     'build:manifestGenerated': (_wxt, manifest) => {
       if (manifest.content_scripts?.[0]) {
         manifest.content_scripts[0].matches = [...SITE_MATCHES];
+      }
+    },
+    'build:done': () => {
+      const mode = process.env.NODE_ENV;
+      const api = process.env.VITE_API_BASE_URL ?? '';
+      if (mode === 'production' && api && !api.startsWith('https://')) {
+        throw new Error(
+          'Production builds require VITE_API_BASE_URL to use https://',
+        );
       }
     },
   },

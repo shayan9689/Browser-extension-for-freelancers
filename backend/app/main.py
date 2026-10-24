@@ -8,7 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
+from app.daily_cap import DailyRequestCap
 from app.logging_utils import RequestIdFilter, StructuredLoggingMiddleware, configure_logging
+from app.middleware import RequestSizeLimitMiddleware
 from app.providers import get_provider
 from app.rate_limit import InMemoryRateLimiter
 from app.schemas import ErrorResponse, HealthResponse, ProposalRequest, ProposalResponse
@@ -21,14 +23,18 @@ logging.getLogger().addFilter(RequestIdFilter())
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
+    if settings.env == "production" and not settings.origins_list():
+        raise RuntimeError("ALLOWED_ORIGINS must be set in production")
     app.state.settings = settings
     app.state.provider = get_provider(settings)
     app.state.limiter = InMemoryRateLimiter(settings.rate_limit_per_hour)
+    app.state.daily_cap = DailyRequestCap(settings.daily_request_cap)
     yield
 
 
 app = FastAPI(title="ProposalPilot API", lifespan=lifespan)
 app.add_middleware(StructuredLoggingMiddleware)
+app.add_middleware(RequestSizeLimitMiddleware, max_bytes=100_000)
 
 _settings = get_settings()
 _origins = _settings.origins_list()
@@ -65,6 +71,13 @@ async def create_proposal(
     request: Request,
 ) -> ProposalResponse | JSONResponse:
     limiter: InMemoryRateLimiter = request.app.state.limiter
+    daily: DailyRequestCap = request.app.state.daily_cap
+    if not daily.allow():
+        return error_json(
+            "RATE_LIMITED",
+            "Daily request cap reached. Try again tomorrow.",
+            429,
+        )
     ip = request.client.host if request.client else "unknown"
     allowed, retry_after = limiter.check(str(payload.install_id), ip)
     if not allowed:
