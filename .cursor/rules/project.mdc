@@ -1,0 +1,17 @@
+---
+description: ProposalPilot project rules — always apply
+alwaysApply: true
+---
+
+# ProposalPilot rules
+
+- Work only on the current phase. Never start the next one until the user verifies the gate and approves.
+- Before coding, write a short plan and list the files you will create or change.
+- After coding, run lint, typecheck and tests and paste the REAL output. Never claim something passes without running it.
+- No secrets in the extension. No eval, no remote code, no external scripts (MV3 rules).
+- Request the minimum Chrome permissions and justify each one in PROGRESS.md.
+- No `any` types, no `dangerouslySetInnerHTML`, no `console.log` left in production code.
+- At the end of a phase: update PROGRESS.md (done, how to verify, known issues) then STOP and wait for approval.
+- Read-only on marketplace pages. Never auto-submit, never bulk scrape.
+- The AI must use only facts from the user's profile. Never invent experience.
+- Job text goes to the backend/LLM for generation and must not be stored or logged server-side.

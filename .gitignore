@@ -1,0 +1,36 @@
+# Node / extension
+node_modules/
+.output/
+dist/
+*.local
+.wxt/
+coverage/
+playwright-report/
+test-results/
+
+# Python / backend
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+env/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Build artifacts
+*.zip
+*.log
