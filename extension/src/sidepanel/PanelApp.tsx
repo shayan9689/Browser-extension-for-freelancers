@@ -10,17 +10,13 @@ import {
   sendToActiveTab,
 } from '../shared/messages';
 import { normalizeDescription } from '../content/adapters/normalize';
+import {
+  addHistoryItem,
+  loadStore,
+  profileIsEmpty,
+  type Profile,
+} from '../shared/storage';
 import { usePanelStore } from './store';
-
-const DEFAULT_PROFILE = {
-  name: 'Freelancer',
-  headline: 'Independent contractor',
-  skills: [] as string[],
-  years_experience: 0,
-  hourly_rate: null as number | null,
-  currency: 'USD',
-  highlights: [] as string[],
-};
 
 function wordCount(text: string): number {
   return text.trim() ? text.trim().split(/\s+/).length : 0;
@@ -33,18 +29,18 @@ export default function PanelApp() {
   const [copied, setCopied] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [installId, setInstallId] = useState<string>('');
+  const [profile, setProfile] = useState<Profile | null>(null);
 
   useEffect(() => {
-    void chrome.storage.local.get(['install_id']).then((data) => {
-      if (typeof data.install_id === 'string' && data.install_id) {
-        setInstallId(data.install_id);
-        return;
+    void loadStore().then((data) => {
+      setInstallId(data.installId);
+      setProfile(data.profile);
+      if (data.profile) {
+        setTone(data.profile.defaultTone);
+        setLength(data.profile.defaultLength);
       }
-      const id = crypto.randomUUID();
-      void chrome.storage.local.set({ install_id: id });
-      setInstallId(id);
     });
-  }, []);
+  }, [setLength, setTone]);
 
   useEffect(() => {
     if (state.status !== 'error' || state.error.code !== 'RATE_LIMITED') {
@@ -179,19 +175,40 @@ export default function PanelApp() {
             budget_text: job.budgetText ?? null,
             skills: job.skills,
           },
-          profile: DEFAULT_PROFILE,
+          profile: {
+            name: profile?.name || 'Freelancer',
+            headline: profile?.headline || 'Independent contractor',
+            skills: profile?.skills ?? [],
+            years_experience: profile?.yearsExperience ?? 0,
+            hourly_rate: profile?.hourlyRate ?? null,
+            currency: profile?.currency ?? 'USD',
+            highlights: profile?.highlights ?? [],
+          },
           options: { tone, length },
         },
         controller.signal,
       );
+      const draft =
+        profile?.signOff && !result.proposal.includes(profile.signOff)
+          ? `${result.proposal}\n\n${profile.signOff}`
+          : result.proposal;
       setState({
         status: 'result',
         job,
         editedDescription,
         result,
-        draft: result.proposal,
+        draft,
         tone,
         length,
+      });
+      void addHistoryItem({
+        id: crypto.randomUUID(),
+        jobTitle: job.title,
+        platform: job.platform,
+        createdAt: new Date().toISOString(),
+        proposal: draft,
+        priceAmount: result.suggested_price.amount,
+        priceCurrency: result.suggested_price.currency,
       });
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
@@ -218,7 +235,7 @@ export default function PanelApp() {
         editedDescription,
       });
     }
-  }, [installId, length, setState, state, tone]);
+  }, [installId, length, profile, setState, state, tone]);
 
   const cancelGenerate = () => {
     abortRef.current?.abort();
@@ -248,6 +265,25 @@ export default function PanelApp() {
       <header>
         <h1 className="text-lg font-semibold tracking-tight">ProposalPilot</h1>
         <p className="opacity-80">Draft proposals from the job you are viewing</p>
+        {profileIsEmpty(profile) ? (
+          <p className="mt-2 rounded border border-amber-500/40 bg-amber-500/10 p-2 text-xs">
+            Profile is empty — proposals may be generic.{' '}
+            <button
+              type="button"
+              className="underline"
+              onClick={() => void chrome.runtime.openOptionsPage()}
+            >
+              Complete your profile
+            </button>
+          </p>
+        ) : null}
+        <button
+          type="button"
+          className="mt-2 text-xs underline opacity-70"
+          onClick={() => void chrome.runtime.openOptionsPage()}
+        >
+          Settings & history
+        </button>
       </header>
 
       {import.meta.env.DEV ? (

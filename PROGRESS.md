@@ -8,7 +8,7 @@
 | 3 | Backend API (fake LLM) | done | 2026-10-24 | FastAPI + rate limit + FakeProvider; pytest/ruff green | Docker not installed on this machine |
 | 4 | Real proposal generation | done | 2026-10-24 | Anthropic/OpenAI providers + prompts + injection defence; mocked tests | Needs real API key for live golden quality |
 | 5 | Side panel UI | done | 2026-10-24 | State machine UI + API client + cancel/errors; 17 tests | Manual E2E with local backend recommended |
-| 6 | Profile, settings, local history | pending | | | |
+| 6 | Profile, settings, local history | done | 2026-10-24 | Options/onboarding, storage migrations, history cap 50 | — |
 | 7 | Hardening, security, privacy | pending | | | |
 | 8 | Automated tests and CI | pending | | | |
 | 9 | Deploy backend (production) | pending | | | |
