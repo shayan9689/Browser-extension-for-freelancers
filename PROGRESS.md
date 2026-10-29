@@ -16,6 +16,12 @@
 | 11 | Publish to Chrome Web Store | done | 2026-10-24 | review-audit.md prepared | Dashboard submit is manual |
 | 12 | Post-launch monitoring & docs | done | 2026-10-24 | release.yml, CHANGELOG, playbook | Optional CWS API secrets later |
 
+## Launch status (2026-10-30)
+
+Code for phases 0-12 is complete. Phase gates 9-11 still need the owner's manual steps
+(deploy, production test, screenshots, store submission). Follow `docs/launch-checklist.md`.
+The 2026-10-30 re-audit fixed production-blocking issues; see CHANGELOG.
+
 ## Chrome permissions (justifications filled as added)
 
 | Permission | Why |

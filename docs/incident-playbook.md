@@ -3,7 +3,7 @@
 ## Extension rejected / taken down
 
 1. Read the exact policy cited in the email.
-2. Fix only that issue; bump version; rebuild zip; resubmit.
+2. Fix only that issue; bump version (`cd extension && npm run bump -- patch`, update CHANGELOG); tag `vX.Y.Z` to build the zip; resubmit.
 3. Common causes: unused permissions, privacy mismatch, trademarks, reviewers cannot test.
 
 ## Marketplace markup changed

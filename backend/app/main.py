@@ -8,11 +8,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
-from app.daily_cap import DailyRequestCap
+from app.daily_cap import DailyRequestCap, RedisDailyCap
 from app.logging_utils import RequestIdFilter, StructuredLoggingMiddleware, configure_logging
 from app.middleware import RequestSizeLimitMiddleware
 from app.providers import get_provider
-from app.rate_limit import InMemoryRateLimiter
+from app.providers.fake import FakeProvider
+from app.rate_limit import InMemoryRateLimiter, RedisRateLimiter
 from app.schemas import ErrorResponse, HealthResponse, ProposalRequest, ProposalResponse
 from app.service import generate_proposal
 
@@ -27,8 +28,21 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         raise RuntimeError("ALLOWED_ORIGINS must be set in production")
     app.state.settings = settings
     app.state.provider = get_provider(settings)
-    app.state.limiter = InMemoryRateLimiter(settings.rate_limit_per_hour)
-    app.state.daily_cap = DailyRequestCap(settings.daily_request_cap)
+    if settings.env == "production" and isinstance(app.state.provider, FakeProvider):
+        raise RuntimeError(
+            "Production needs LLM_PROVIDER=anthropic|openai and the matching API key"
+        )
+    if settings.redis_url:
+        import redis
+
+        client = redis.Redis.from_url(settings.redis_url, socket_timeout=2)
+        client.ping()  # fail fast on a bad REDIS_URL
+        app.state.limiter = RedisRateLimiter(client, settings.rate_limit_per_hour)
+        app.state.daily_cap = RedisDailyCap(client, settings.daily_request_cap)
+    else:
+        # Per-process: resets on restart and is not shared between workers.
+        app.state.limiter = InMemoryRateLimiter(settings.rate_limit_per_hour)
+        app.state.daily_cap = DailyRequestCap(settings.daily_request_cap)
     yield
 
 
@@ -73,25 +87,23 @@ async def ping_llm(request: Request) -> JSONResponse:
         return error_json("INVALID_INPUT", "Unauthorized", 401)
     provider = request.app.state.provider
     try:
-        _ = provider.generate("Reply with OK", system="Reply with exactly OK")
+        # Mentions JSON because OpenAI's json_object mode rejects prompts without it.
+        _ = provider.generate('Reply with the JSON {"ok": true}', system="Reply with JSON only.")
         return JSONResponse({"status": "ok"})
     except Exception:
         return JSONResponse({"status": "fail"}, status_code=502)
 
 
+# Sync handler: FastAPI runs it in a threadpool, so the blocking LLM call
+# doesn't stall the event loop for other requests.
 @app.post("/v1/proposals", response_model=None)
-async def create_proposal(
+def create_proposal(
     payload: ProposalRequest,
     request: Request,
 ) -> ProposalResponse | JSONResponse:
-    limiter: InMemoryRateLimiter = request.app.state.limiter
-    daily: DailyRequestCap = request.app.state.daily_cap
-    if not daily.allow():
-        return error_json(
-            "RATE_LIMITED",
-            "Daily request cap reached. Try again tomorrow.",
-            429,
-        )
+    limiter: InMemoryRateLimiter | RedisRateLimiter = request.app.state.limiter
+    daily: DailyRequestCap | RedisDailyCap = request.app.state.daily_cap
+    # Client IP comes from X-Forwarded-For via uvicorn --proxy-headers.
     ip = request.client.host if request.client else "unknown"
     allowed, retry_after = limiter.check(str(payload.install_id), ip)
     if not allowed:
@@ -102,6 +114,12 @@ async def create_proposal(
         )
         resp.headers["Retry-After"] = str(retry_after)
         return resp
+    if not daily.allow():
+        return error_json(
+            "RATE_LIMITED",
+            "Daily request cap reached. Try again tomorrow.",
+            429,
+        )
 
     try:
         return generate_proposal(payload, request.app.state.provider)

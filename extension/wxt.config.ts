@@ -10,7 +10,7 @@ export default defineConfig({
   }),
   manifest: {
     name: 'ProposalPilot',
-    version: '1.0.0',
+    // version comes from package.json (single source of truth; see `npm run bump`)
     description:
       'Drafts a tailored freelance proposal from the job post you are viewing. You review and send.',
     permissions: ['storage', 'sidePanel', 'activeTab', 'scripting'],

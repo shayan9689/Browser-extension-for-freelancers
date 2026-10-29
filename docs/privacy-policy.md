@@ -1,6 +1,6 @@
 # Privacy Policy — ProposalPilot
 
-**Last updated:** 2026-10-24
+**Last updated:** 2026-10-30
 
 ProposalPilot helps freelancers draft proposals from the job post they are viewing.
 
@@ -12,6 +12,8 @@ When you click **Generate proposal**, the extension sends:
 - The profile text you saved locally (name, headline, skills, experience, rate, highlights)
 - An anonymous `install_id` used only for rate limiting
 
+The ProposalPilot server also sees your IP address, as any web server does. It is used only for rate limiting and abuse prevention.
+
 ## What we do **not** do
 
 - We do **not** store or log job text or profile text on the server
@@ -22,14 +24,14 @@ When you click **Generate proposal**, the extension sends:
 
 ## Third parties
 
-Generation uses an LLM provider you configure on the backend (Anthropic or OpenAI). Their processing is governed by their own policies. Job/profile text is sent to that provider only to produce the draft.
+The ProposalPilot server sends the job text and your profile text to OpenAI to generate the draft, and for no other purpose. OpenAI processes it under its API data policy (https://openai.com/policies/api-data-usage-policies).
 
 ## Data retention
 
-Server-side: none for job/profile content. Rate-limit counters may keep anonymous IDs temporarily in memory (or Redis if configured).
+Server-side: none for job/profile content. Rate-limit counters keep the anonymous `install_id` and IP address temporarily (in memory or Redis) and expire automatically.
 
 On-device: until you clear them via **Delete all data** in Settings.
 
 ## Contact
 
-Replace this with your support email before publishing: `support@example.com`
+Questions or deletion requests: SUPPORT_EMAIL_TODO

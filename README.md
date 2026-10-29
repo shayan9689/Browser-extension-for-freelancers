@@ -48,7 +48,7 @@ Set `VITE_API_BASE_URL` (see `extension/.env.development`).
 
 ```bash
 cd backend
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 copy .env.example .env
 uvicorn app.main:app --reload
 ```

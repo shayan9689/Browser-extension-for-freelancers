@@ -5,7 +5,7 @@
 1. Read `PRD.md` and `PROGRESS.md`.
 2. Work one phase at a time; do not skip verification gates.
 3. Extension: `cd extension && npm install && npm run dev`
-4. Backend: `cd backend && pip install -r requirements.txt && uvicorn app.main:app --reload`
+4. Backend: `cd backend && pip install -r requirements-dev.txt && uvicorn app.main:app --reload`
 
 ## Site stopped working
 

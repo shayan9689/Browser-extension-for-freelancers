@@ -1,7 +1,7 @@
 # Chrome Web Store review audit
 
-**Date:** 2026-10-24  
-**Verdict:** PASS with manual follow-ups before submit
+**Date:** 2026-10-24 (re-audited 2026-10-30)  
+**Verdict:** PASS on code; owner steps pending (see section 7)
 
 ## 1. Permissions and host matches
 
@@ -38,11 +38,16 @@ Working name “ProposalPilot” avoids marketplace trademarks in title/icons. K
 
 Yes, using `docs/demo/job-post.html` + selected-text flow, once privacy policy and demo are publicly hosted and the production API is live.
 
-## 7. FIX list (before submit)
+## 7. FIX list (before submit) — status 2026-10-30
 
-1. Host privacy policy + demo page on GitHub Pages; paste public URLs in the dashboard.
-2. Set production `VITE_API_BASE_URL=https://…` and rebuild/zip.
-3. Set backend `ALLOWED_ORIGINS=chrome-extension://REAL_ID` after first upload.
-4. Replace `support@example.com` in the privacy policy.
-5. Create real store screenshots at required sizes.
-6. Pay Chrome Web Store developer registration fee and submit.
+| # | Item | Status |
+|---|------|--------|
+| 1 | Privacy policy + demo page public via GitHub Pages | Done (URLs in `docs/launch-checklist.md`) |
+| 2 | Production `VITE_API_BASE_URL` baked into zip | Build now enforces https URL; release reads repo variable `API_BASE_URL` — pending backend URL |
+| 3 | `ALLOWED_ORIGINS=chrome-extension://REAL_ID` | Pending first upload |
+| 4 | Support email in privacy policy | Pending owner (`SUPPORT_EMAIL_TODO`) |
+| 5 | Store screenshots 1280x800 | Pending owner; icon + promo tile done in `extension/store-assets/` |
+| 6 | Developer registration and submit | Pending owner |
+
+Found and fixed during the re-audit: the v1.0.0 zip contained a `localhost` fallback and failed
+`verify-zip`; privacy policy did not name the LLM provider or disclose IP use for rate limiting.

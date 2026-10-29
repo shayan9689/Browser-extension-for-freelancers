@@ -28,7 +28,7 @@ How it works:
 5. Edit, copy, and paste it yourself into the marketplace. ProposalPilot never submits for you.
 
 Privacy:
-- Job text and your profile are sent only to your configured backend / LLM provider when you generate.
+- Job text and your profile are sent to the ProposalPilot server and OpenAI only when you click Generate, and are not stored on the server.
 - History and profile stay on your device.
 - No accounts. No auto-submit. No bulk scraping.
 
@@ -48,17 +48,29 @@ See `docs/permissions.md`.
 
 ## Reviewer test instructions
 
-1. Install the extension.
-2. Complete the short profile form (name, headline, one skill is enough).
-3. Open the hosted demo page: `docs/demo/job-post.html` (publish via GitHub Pages) OR any page, select the job text.
-4. Open the side panel → Use selected text → Generate proposal.
-5. Expect an editable draft; Copy should place text on the clipboard.
-6. Backend must be reachable at the production HTTPS API configured in the build.
+No marketplace account is needed.
 
-## Screenshot checklist
+1. Install the extension. The profile page opens automatically: fill in name, headline and at least one skill, then save.
+2. Open the demo job post: https://shayan9689.github.io/Browser-extension-for-freelancers/demo/job-post.html
+3. Click the ProposalPilot toolbar icon to open the side panel.
+4. Select the job text on the demo page with the mouse, then click **Use selected text** in the panel.
+5. Click **Generate proposal**. Expected: within ~20 seconds an editable draft appears with a suggested price and delivery estimate.
+6. Click **Copy**: the draft is placed on the clipboard. Nothing is ever submitted to any website.
+
+## Store artwork
+
+- Store icon (128x128, 96px art + padding): `extension/store-assets/store-icon-128.png`
+- Small promo tile (440x280): `extension/store-assets/promo-small-440x280.png`
+- Regenerate with `npm run icons` (source: `extension/assets/store/icon.svg`)
+
+## Screenshot checklist (1280x800, taken on the demo page)
 
 1. Idle / open a job post
 2. Job detected with skills
 3. Generating state
 4. Result with price + delivery chips
 5. Settings / profile page
+
+## Privacy policy URL
+
+https://shayan9689.github.io/Browser-extension-for-freelancers/privacy-policy.html

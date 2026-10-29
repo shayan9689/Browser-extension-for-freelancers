@@ -9,7 +9,7 @@
 | Variable | Purpose |
 |----------|---------|
 | `ENV` | `production` |
-| `LLM_PROVIDER` | `anthropic` or `openai` |
+| `LLM_PROVIDER` | `anthropic` or `openai` (production refuses to start without a matching key) |
 | `LLM_MODEL` | optional; defaults to `claude-opus-5-5` (Anthropic) or `gpt-4o-mini` (OpenAI). `claude-haiku-5-5` is far cheaper per proposal |
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | Provider key |
 | `ALLOWED_ORIGINS` | `chrome-extension://YOUR_EXTENSION_ID` |
@@ -23,8 +23,17 @@
 
 ## Redis tradeoff
 
-- Without Redis: in-memory limiter resets on restart / differs per instance.
-- With Redis: shared counters across instances (set `REDIS_URL`).
+- Without Redis: counters live in each uvicorn worker (the image runs 2), so limits are per worker
+  and reset on every restart. Render's free plan sleeps after ~15 min idle, so the daily cost cap
+  effectively resets often. Rely on the LLM provider's spending limit in that setup.
+- With Redis: per-install/per-IP hourly limits and the global daily cap are shared by all workers and
+  survive restarts. On Render, create a free **Key Value** instance in the same region and paste its
+  internal URL into `REDIS_URL`. The app refuses to start if `REDIS_URL` is set but unreachable.
+
+## Client IPs behind the proxy
+
+The container runs uvicorn with `--proxy-headers --forwarded-allow-ips *`, so per-IP limits use the
+real client IP from `X-Forwarded-For`. Only expose the container behind the platform's proxy.
 
 ## Local production-like run
 
