@@ -1,4 +1,4 @@
-# ProposalPilot — Product Requirements Document
+# ProposalPilot â€” Product Requirements Document
 
 ## Problem
 
@@ -19,24 +19,24 @@ Freelancers who bid or propose on Fiverr/Upwork-style marketplaces and want a fa
 
 ## Explicit non-goals (v1)
 
-- **No auto-submit** — the extension never clicks, types, or submits on any marketplace
-- **No bulk scraping** — only the page the user is viewing, on demand
-- **No accounts** — no signup, login, or cloud user accounts
-- **No payments** — free tool; no in-extension billing
+- **No auto-submit** â€” the extension never clicks, types, or submits on any marketplace
+- **No bulk scraping** â€” only the page the user is viewing, on demand
+- **No accounts** â€” no signup, login, or cloud user accounts
+- **No payments** â€” free tool; no in-extension billing
 - No bypassing marketplace logins or ToS
 
 ## Success criteria
 
 - On a real job page, the side panel shows correct extracted title/description/budget
 - Generate returns an editable draft within ~15 seconds under normal conditions
-- Proposals use only facts from the user’s profile (never invent experience)
-- Network tab shows only the generation call to the user’s backend
+- Proposals use only facts from the userâ€™s profile (never invent experience)
+- Network tab shows only the generation call to the userâ€™s backend
 - Extension loads without console errors; store-ready permissions and privacy policy
 
 ## Privacy principles
 
 - Job text and profile text are sent only to our backend and the configured LLM provider for generation
 - Job text is **never stored or logged** on the server
-- An anonymous `install_id` is used for rate limiting only — not linked to an account
+- An anonymous `install_id` is used for rate limiting only â€” not linked to an account
 - History and profile stay on-device in `chrome.storage.local`
 - Data is not sold or used for unrelated purposes

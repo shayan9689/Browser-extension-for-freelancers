@@ -2,13 +2,13 @@
 
 | Phase | Name | Status | Date | Notes | Known issues |
 |------:|------|--------|------|-------|--------------|
-| 0 | Project setup and ground rules | done | 2026-10-24 | README, PRD, PROGRESS, Cursor rules, layout | — |
+| 0 | Project setup and ground rules | done | 2026-10-24 | README, PRD, PROGRESS, Cursor rules, layout | â€” |
 | 1 | Extension scaffold | done | 2026-10-24 | WXT+React side panel, typed PING | Load unpacked for manual ping check |
 | 2 | Job post detection and extraction | done | 2026-10-24 | Adapters + fixtures + selection fallback | Real-site manual check recommended |
 | 3 | Backend API (fake LLM) | done | 2026-10-24 | FastAPI + rate limit + FakeProvider | Docker not installed locally |
 | 4 | Real proposal generation | done | 2026-10-24 | Anthropic/OpenAI + injection defence | Needs real API key for live quality |
 | 5 | Side panel UI | done | 2026-10-24 | Full state machine + API client | Manual E2E with local backend |
-| 6 | Profile, settings, local history | done | 2026-10-24 | Options/onboarding, history cap 50 | — |
+| 6 | Profile, settings, local history | done | 2026-10-24 | Options/onboarding, history cap 50 | â€” |
 | 7 | Hardening, security, privacy | done | 2026-10-24 | permissions/privacy, daily cap, HTTPS check | Install Docker/gitleaks for full gate |
 | 8 | Automated tests and CI | done | 2026-10-24 | GitHub Actions, fixtures check, Playwright smoke | Full extension-loaded e2e still thin |
 | 9 | Deploy backend (production) | done | 2026-10-24 | render.yaml, deploy.md, runbook, ping-llm | User must deploy to a host |
