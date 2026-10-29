@@ -10,6 +10,7 @@
 |----------|---------|
 | `ENV` | `production` |
 | `LLM_PROVIDER` | `anthropic` or `openai` |
+| `LLM_MODEL` | optional; defaults to `claude-opus-5-5` (Anthropic) or `gpt-4o-mini` (OpenAI). `claude-haiku-5-5` is far cheaper per proposal |
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | Provider key |
 | `ALLOWED_ORIGINS` | `chrome-extension://YOUR_EXTENSION_ID` |
 | `RATE_LIMIT_PER_HOUR` | e.g. `20` |

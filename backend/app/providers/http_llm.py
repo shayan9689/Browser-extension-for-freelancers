@@ -13,9 +13,9 @@ class HttpLLMError(Exception):
 
 
 class AnthropicProvider:
-    def __init__(self, api_key: str, model: str = "claude-sonnet-4-20250514") -> None:
+    def __init__(self, api_key: str, model: str = "claude-opus-5-5") -> None:
         self.api_key = api_key
-        self.model = model
+        self.model = model or "claude-opus-5-5"
 
     def generate(self, prompt: str, *, system: str = "") -> str:
         return self._call(prompt, system=system, attempt=1)
@@ -28,7 +28,9 @@ class AnthropicProvider:
         }
         body = {
             "model": self.model,
-            "max_tokens": 1024,
+            # Current models always think; thinking tokens count toward max_tokens.
+            "max_tokens": 4096,
+            "output_config": {"effort": "low"},
             "system": system,
             "messages": [{"role": "user", "content": prompt}],
         }
@@ -52,15 +54,21 @@ class AnthropicProvider:
             raise HttpLLMError(f"LLM server error {res.status_code}", retryable=True)
 
         data = res.json()
+        if data.get("stop_reason") == "refusal":
+            raise HttpLLMError("LLM refused the request", retryable=False)
         parts = data.get("content") or []
-        texts = [p.get("text", "") for p in parts if isinstance(p, dict)]
+        texts = [
+            p.get("text", "")
+            for p in parts
+            if isinstance(p, dict) and p.get("type") == "text"
+        ]
         return "\n".join(texts).strip()
 
 
 class OpenAIProvider:
     def __init__(self, api_key: str, model: str = "gpt-4o-mini") -> None:
         self.api_key = api_key
-        self.model = model
+        self.model = model or "gpt-4o-mini"
 
     def generate(self, prompt: str, *, system: str = "") -> str:
         return self._call(prompt, system=system, attempt=1)

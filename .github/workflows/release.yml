@@ -5,11 +5,20 @@ on:
     tags:
       - 'v*.*.*'
 
+# Repository settings this workflow reads:
+#   vars.API_BASE_URL       (required) production backend, e.g. https://api.example.com
+#   vars.CWS_AUTO_PUBLISH   (optional) 'true' to submit for review after upload
+#   secrets.CHROME_EXTENSION_ID, CHROME_CLIENT_ID, CHROME_CLIENT_SECRET, CHROME_REFRESH_TOKEN
+#                           (optional) enable the Chrome Web Store upload step
+
 jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    defaults:
+      run:
+        working-directory: extension
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -17,19 +26,47 @@ jobs:
           node-version: '20'
           cache: npm
           cache-dependency-path: extension/package-lock.json
-      - working-directory: extension
+      - name: Check tag matches package version
         run: |
-          npm ci
-          npm run lint
-          npm run typecheck
-          npm run test
-          npm run build
-          npm run zip
-          npm run verify-zip || true
+          pkg="v$(node -p "require('./package.json').version")"
+          if [ "$pkg" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json ($pkg)"; exit 1
+          fi
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run check:fixtures
+      - run: npm run zip
+        env:
+          VITE_API_BASE_URL: ${{ vars.API_BASE_URL }}
+      - run: npm run verify-zip
       - uses: softprops/action-gh-release@v2
         with:
           files: extension/.output/*.zip
+      - name: Upload to Chrome Web Store
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # Optional Chrome Web Store upload when secrets exist:
-      # CHROME_EXTENSION_ID, CHROME_CLIENT_ID, CHROME_CLIENT_SECRET, CHROME_REFRESH_TOKEN
+          EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          AUTO_PUBLISH: ${{ vars.CWS_AUTO_PUBLISH }}
+        run: |
+          if [ -z "$EXTENSION_ID" ] || [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ] || [ -z "$REFRESH_TOKEN" ]; then
+            echo "Chrome Web Store secrets not set; skipping upload."; exit 0
+          fi
+          token=$(curl -sf https://oauth2.googleapis.com/token \
+            -d client_id="$CLIENT_ID" -d client_secret="$CLIENT_SECRET" \
+            -d refresh_token="$REFRESH_TOKEN" -d grant_type=refresh_token | jq -r .access_token)
+          zip=$(ls .output/*.zip | head -1)
+          curl -sf -X PUT -H "Authorization: Bearer $token" -H "x-goog-api-version: 2" \
+            -T "$zip" "https://www.googleapis.com/upload/chromewebstore/v1.1/items/$EXTENSION_ID" \
+            | tee upload.json
+          jq -e '.uploadState == "SUCCESS"' upload.json
+          if [ "$AUTO_PUBLISH" = "true" ]; then
+            curl -sf -X POST -H "Authorization: Bearer $token" -H "x-goog-api-version: 2" \
+              -H "Content-Length: 0" \
+              "https://www.googleapis.com/chromewebstore/v1.1/items/$EXTENSION_ID/publish"
+          else
+            echo "Uploaded as draft. Submit for review in the dashboard (or set CWS_AUTO_PUBLISH=true)."
+          fi

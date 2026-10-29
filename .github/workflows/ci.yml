@@ -23,8 +23,11 @@ jobs:
       - run: npm run typecheck
       - run: npm run test
       - run: npm run check:fixtures
-      - run: npm run build
+      # Placeholder URL: CI only checks the production build/zip, never ships it.
       - run: npm run zip
+        env:
+          VITE_API_BASE_URL: https://api.ci.invalid
+      - run: npm run verify-zip
       - uses: actions/upload-artifact@v4
         with:
           name: proposalpilot-extension

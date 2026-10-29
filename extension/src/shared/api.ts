@@ -52,7 +52,9 @@ export class ApiError extends Error {
 
 function apiBaseUrl(): string {
   const url = import.meta.env.VITE_API_BASE_URL as string | undefined;
-  return (url ?? 'http://localhost:8000').replace(/\/$/, '');
+  // Dev-only fallback; the DEV branch is stripped from production bundles.
+  if (!url && import.meta.env.DEV) return 'http://localhost:8000';
+  return (url ?? '').replace(/\/$/, '');
 }
 
 export async function generateProposal(

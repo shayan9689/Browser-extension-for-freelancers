@@ -12,6 +12,7 @@ class Settings(BaseSettings):
 
     env: str = "dev"
     llm_provider: str = "fake"
+    llm_model: str = ""  # empty = provider default
     anthropic_api_key: str = ""
     openai_api_key: str = ""
     allowed_origins: str = ""

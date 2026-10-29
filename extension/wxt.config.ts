@@ -1,5 +1,6 @@
 import { defineConfig } from 'wxt';
 import tailwindcss from '@tailwindcss/vite';
+import { loadEnv } from 'vite';
 import { SITE_MATCHES } from './src/shared/sites';
 
 export default defineConfig({
@@ -30,12 +31,14 @@ export default defineConfig({
         manifest.content_scripts[0].matches = [...SITE_MATCHES];
       }
     },
-    'build:done': () => {
-      const mode = process.env.NODE_ENV;
-      const api = process.env.VITE_API_BASE_URL ?? '';
-      if (mode === 'production' && api && !api.startsWith('https://')) {
+    'build:before': (wxt) => {
+      if (wxt.config.mode !== 'production') return;
+      const env = { ...loadEnv('production', wxt.config.root, 'VITE_'), ...process.env };
+      const api = env.VITE_API_BASE_URL ?? '';
+      if (!api.startsWith('https://')) {
         throw new Error(
-          'Production builds require VITE_API_BASE_URL to use https://',
+          'Production builds require VITE_API_BASE_URL set to an https:// URL ' +
+            '(env var or extension/.env.production)',
         );
       }
     },
