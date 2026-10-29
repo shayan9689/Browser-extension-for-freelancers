@@ -45,7 +45,7 @@ Yes, using `docs/demo/job-post.html` + selected-text flow, once privacy policy a
 | 1 | Privacy policy + demo page public via GitHub Pages | Done (URLs in `docs/launch-checklist.md`) |
 | 2 | Production `VITE_API_BASE_URL` baked into zip | Build now enforces https URL; release reads repo variable `API_BASE_URL` — pending backend URL |
 | 3 | `ALLOWED_ORIGINS=chrome-extension://REAL_ID` | Pending first upload |
-| 4 | Support email in privacy policy | Pending owner (`SUPPORT_EMAIL_TODO`) |
+| 4 | Support email in privacy policy | Done (supportextension9@gmail.com) |
 | 5 | Store screenshots 1280x800 | Pending owner; icon + promo tile done in `extension/store-assets/` |
 | 6 | Developer registration and submit | Pending owner |
 

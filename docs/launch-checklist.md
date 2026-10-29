@@ -10,8 +10,7 @@ Public URLs (GitHub Pages, serves `docs/`):
 
 ## A. Accounts and limits (15 min)
 
-- [ ] Create a support inbox you will actually check (e.g. a new Gmail). Send the address to the
-      developer so `SUPPORT_EMAIL_TODO` in `docs/privacy-policy.md` can be replaced.
+- [x] Support inbox: supportextension9@gmail.com (in privacy policy and listing).
 - [ ] OpenAI dashboard → create a **project API key** for ProposalPilot.
 - [ ] OpenAI dashboard → Limits: set a monthly budget (e.g. $10) and an email alert at 50%.
 - [ ] Generate an admin secret for `/v1/ping-llm`, e.g. `python -c "import secrets; print(secrets.token_urlsafe(32))"`.
@@ -36,7 +35,7 @@ Public URLs (GitHub Pages, serves `docs/`):
 4. [ ] Recommended: **New → Key Value** (free, same region) → copy its *internal* URL →
        add `REDIS_URL=<url>` to the web service.
 5. [ ] Health check path: `/health`. Create the service and wait for "Live".
-6. [ ] Note the URL, e.g. `https://proposalpilot-api.onrender.com`, and **send it to the developer**.
+6. [ ] Backend URL: `https://proposalpilot-api-awbv.onrender.com`.
 7. [ ] Verify (gate):
        - Open `https://<your-api>/health` on your phone with Wi-Fi off → `{"status":"ok",...}`
        - `curl -H "x-admin-secret: <secret>" https://<your-api>/v1/ping-llm` → `{"status":"ok"}`

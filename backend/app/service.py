@@ -63,6 +63,19 @@ def _post_check(response: ProposalResponse, request: ProposalRequest) -> Proposa
     return response
 
 
+def _describe(exc: Exception) -> str:
+    """Error summary for logs: field paths and error types only, never model text."""
+    if isinstance(exc, ValidationError):
+        return "; ".join(
+            f"{'.'.join(str(p) for p in e['loc'])}:{e['type']}" for e in exc.errors()
+        )
+    if isinstance(exc, json.JSONDecodeError):
+        return f"JSONDecodeError at pos {exc.pos}"
+    if isinstance(exc, HttpLLMError):
+        return str(exc)
+    return type(exc).__name__
+
+
 def _parse_response(raw: str) -> ProposalResponse:
     cleaned = raw.strip()
     if cleaned.startswith("```"):
@@ -107,6 +120,7 @@ def generate_proposal(request: ProposalRequest, provider: Provider) -> ProposalR
     try:
         raw = provider.generate(user_prompt, system=SYSTEM_PROMPT)
     except HttpLLMError as exc:
+        logger.warning("LLM call failed: %s", exc, extra={"request_id": "-"})
         raise ValueError("UPSTREAM") from exc
 
     if _looks_injected(raw, SYSTEM_PROMPT):
@@ -119,7 +133,12 @@ def generate_proposal(request: ProposalRequest, provider: Provider) -> ProposalR
 
     try:
         parsed = _parse_response(raw)
-    except (json.JSONDecodeError, ValidationError, KeyError):
+    except (json.JSONDecodeError, ValidationError, KeyError) as first_exc:
+        logger.warning(
+            "Invalid model output, retrying: %s",
+            _describe(first_exc),
+            extra={"request_id": "-"},
+        )
         # One repair attempt
         repair = (
             "Your previous reply was not valid JSON. Reply with STRICT JSON only "
@@ -132,6 +151,11 @@ def generate_proposal(request: ProposalRequest, provider: Provider) -> ProposalR
             )
             parsed = _parse_response(raw2)
         except Exception as exc:
+            logger.warning(
+                "Invalid model output after repair: %s",
+                _describe(exc),
+                extra={"request_id": "-"},
+            )
             raise ValueError("INVALID_UPSTREAM") from exc
 
     if _looks_injected(parsed.proposal, SYSTEM_PROMPT):

@@ -74,3 +74,7 @@ No marketplace account is needed.
 ## Privacy policy URL
 
 https://shayan9689.github.io/Browser-extension-for-freelancers/privacy-policy.html
+
+## Support email
+
+supportextension9@gmail.com

@@ -61,6 +61,46 @@ class ProposalResponse(BaseModel):
     questions_to_ask: list[str]
     warnings: list[str] = Field(default_factory=list)
 
+    @field_validator("questions_to_ask", "warnings", mode="before")
+    @classmethod
+    def coerce_str_list(cls, value: object) -> object:
+        # Models sometimes return a single string or null instead of a list.
+        if value is None:
+            return []
+        if isinstance(value, str):
+            return [value] if value.strip() else []
+        return value
+
+
+# Strict JSON schema for OpenAI Structured Outputs; mirrors ProposalResponse.
+PROPOSAL_JSON_SCHEMA: dict = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": [
+        "proposal",
+        "suggested_price",
+        "delivery_days",
+        "questions_to_ask",
+        "warnings",
+    ],
+    "properties": {
+        "proposal": {"type": "string"},
+        "suggested_price": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["amount", "currency", "rationale"],
+            "properties": {
+                "amount": {"type": "number"},
+                "currency": {"type": "string"},
+                "rationale": {"type": "string"},
+            },
+        },
+        "delivery_days": {"type": "integer"},
+        "questions_to_ask": {"type": "array", "items": {"type": "string"}},
+        "warnings": {"type": "array", "items": {"type": "string"}},
+    },
+}
+
 
 class ErrorBody(BaseModel):
     code: str

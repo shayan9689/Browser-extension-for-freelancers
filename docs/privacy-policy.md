@@ -34,4 +34,4 @@ On-device: until you clear them via **Delete all data** in Settings.
 
 ## Contact
 
-Questions or deletion requests: SUPPORT_EMAIL_TODO
+Questions or deletion requests: [supportextension9@gmail.com](mailto:supportextension9@gmail.com)
