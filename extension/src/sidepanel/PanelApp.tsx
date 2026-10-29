@@ -18,6 +18,22 @@ import {
 } from '../shared/storage';
 import { usePanelStore } from './store';
 
+const ERROR_TITLES: Record<string, string> = {
+  NETWORK: "Can't reach the server",
+  RATE_LIMITED: 'Please wait a moment',
+  PAGE_ACCESS: "Can't read this page",
+  NO_CONTENT_SCRIPT: "Can't read this page",
+  EMPTY_SELECTION: 'Nothing selected',
+  NOT_A_JOB_PAGE: 'Not a job post',
+  EXTRACTION_FAILED: "Couldn't find the job details",
+  UPSTREAM: "Couldn't generate a draft",
+  INVALID_RESPONSE: "Couldn't generate a draft",
+};
+
+function errorTitle(code: string): string {
+  return ERROR_TITLES[code] ?? 'Something went wrong';
+}
+
 function wordCount(text: string): number {
   return text.trim() ? text.trim().split(/\s+/).length : 0;
 }
@@ -61,20 +77,8 @@ export default function PanelApp() {
     async (preferSelection = false) => {
       setState({ status: 'detecting' });
       try {
-        if (preferSelection) {
-          const selected = await getSelectedTextFromActiveTab();
-          if (!selected.trim()) {
-            setState({
-              status: 'error',
-              error: {
-                code: 'EMPTY_SELECTION',
-                message: 'Highlight the job text on the page, then try again.',
-              },
-            });
-            return;
-          }
-        }
-
+        // Ask the content script first: on supported sites it can read the page
+        // and the selection without the activeTab grant.
         const response = await sendToActiveTab({
           type: 'GET_JOB_POST',
           preferSelection,
@@ -95,7 +99,22 @@ export default function PanelApp() {
         }
 
         if (response.type === 'CONTENT_ERROR' && preferSelection) {
-          const selected = await getSelectedTextFromActiveTab();
+          // No content script on this tab: read the selection via activeTab,
+          // which Chrome only grants after the toolbar icon is clicked on this tab.
+          let selected: string;
+          try {
+            selected = await getSelectedTextFromActiveTab();
+          } catch {
+            setState({
+              status: 'error',
+              error: {
+                code: 'PAGE_ACCESS',
+                message:
+                  'Chrome blocked access to this tab. Click the ProposalPilot icon in the toolbar while on the job page, then try again.',
+              },
+            });
+            return;
+          }
           if (!selected.trim()) {
             setState({
               status: 'error',
@@ -129,7 +148,13 @@ export default function PanelApp() {
         if (response.type === 'CONTENT_ERROR') {
           setState({
             status: 'error',
-            error: { code: response.code, message: response.message },
+            error: {
+              code: response.code,
+              message:
+                response.code === 'NO_CONTENT_SCRIPT'
+                  ? 'ProposalPilot cannot read this tab yet. Reload the page, or highlight the job text and click Use selected text.'
+                  : response.message,
+            },
           });
           return;
         }
@@ -141,7 +166,10 @@ export default function PanelApp() {
       } catch {
         setState({
           status: 'error',
-          error: { code: 'NETWORK', message: 'Could not read the page.' },
+          error: {
+            code: 'PAGE_ACCESS',
+            message: 'Could not read the page. Reload it, then try again.',
+          },
         });
       }
     },
@@ -384,7 +412,7 @@ export default function PanelApp() {
           role="alert"
           className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-3"
         >
-          <p className="font-medium">{state.error.code}</p>
+          <p className="font-medium">{errorTitle(state.error.code)}</p>
           <p className="mt-1">
             {state.error.code === 'RATE_LIMITED' && countdown !== null
               ? `Rate limited. Try again in ${countdown}s.`
