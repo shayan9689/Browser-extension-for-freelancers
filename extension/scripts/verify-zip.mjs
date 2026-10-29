@@ -21,14 +21,22 @@ if (size > 5 * 1024 * 1024) {
 }
 
 const dest = mkdtempSync(join(tmpdir(), 'pp-zip-'));
-try {
-  execSync(`tar -xf "${zipPath}" -C "${dest}"`, { stdio: 'inherit' });
-} catch {
-  // Windows fallback: PowerShell Expand-Archive
-  execSync(
-    `powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${dest}' -Force"`,
-    { stdio: 'inherit' },
-  );
+// unzip (Linux/macOS CI), then bsdtar (Windows tar.exe), then PowerShell.
+const extractors = [
+  `unzip -q "${zipPath}" -d "${dest}"`,
+  `tar -xf "${zipPath}" -C "${dest}"`,
+  `powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${dest}' -Force"`,
+];
+if (!extractors.some((cmd) => {
+  try {
+    execSync(cmd, { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+})) {
+  console.error('Could not extract zip (need unzip, tar or PowerShell)');
+  process.exit(1);
 }
 
 const manifestPath = join(dest, 'manifest.json');
@@ -41,7 +49,23 @@ if (!existsSync(manifestPath)) {
     rmSync(dest, { recursive: true, force: true });
     process.exit(1);
   }
-  console.warn('manifest is nested; Chrome prefers root — check wxt zip settings');
+  console.error('manifest.json is nested; it must be at the zip root');
+  rmSync(dest, { recursive: true, force: true });
+  process.exit(1);
+}
+
+// Keep in sync with docs/permissions.md; new permissions need a store justification.
+const ALLOWED_PERMISSIONS = new Set(['storage', 'sidePanel', 'activeTab', 'scripting']);
+const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+const unexpected = [
+  ...(manifest.permissions ?? []).filter((p) => !ALLOWED_PERMISSIONS.has(p)),
+  ...(manifest.host_permissions ?? []),
+  ...(manifest.optional_permissions ?? []),
+];
+if (unexpected.length) {
+  console.error(`Unexpected permissions: ${unexpected.join(', ')}`);
+  rmSync(dest, { recursive: true, force: true });
+  process.exit(1);
 }
 
 function walk(dir) {
