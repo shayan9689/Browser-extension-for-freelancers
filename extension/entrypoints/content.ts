@@ -1,4 +1,4 @@
-import { extractJobPost } from '../src/content/adapters';
+import { extractConversation, extractJobPost } from '../src/content/adapters';
 import {
   isGetJobPostRequest,
   isPingRequest,
@@ -24,6 +24,14 @@ function handleMessage(
   }
 
   if (isGetJobPostRequest(message)) {
+    // A whole chat (Fiverr inbox) is checked for a project by the backend.
+    if (!message.preferSelection) {
+      const conversation = extractConversation(document, currentUrl());
+      if (conversation) {
+        sendResponse({ type: 'CONVERSATION', conversation });
+        return false;
+      }
+    }
     const result = extractJobPost(document, currentUrl(), {
       preferSelection: message.preferSelection === true,
     });

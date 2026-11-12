@@ -1,4 +1,4 @@
-import type { ExtractError, JobPost } from './types';
+import type { Conversation, ExtractError, JobPost } from './types';
 
 /** Discriminated union of extension messages — zero `any`. */
 
@@ -17,6 +17,7 @@ export type GetJobPostRequest = {
 
 export type GetJobPostResponse =
   | { type: 'JOB_POST'; job: JobPost }
+  | { type: 'CONVERSATION'; conversation: Conversation }
   | { type: 'JOB_POST_ERROR'; error: ExtractError };
 
 export type ContentErrorResponse = {
@@ -56,6 +57,7 @@ export function isExtensionResponse(msg: unknown): msg is ExtensionResponse {
     type === 'PING_RESULT' ||
     type === 'CONTENT_ERROR' ||
     type === 'JOB_POST' ||
+    type === 'CONVERSATION' ||
     type === 'JOB_POST_ERROR'
   );
 }

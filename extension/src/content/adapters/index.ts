@@ -1,5 +1,5 @@
-import type { ExtractError, JobPost } from '../../shared/types';
-import { fiverrAdapter } from './fiverr';
+import type { Conversation, ExtractError, JobPost } from '../../shared/types';
+import { extractFiverrConversation, fiverrAdapter } from './fiverr';
 import { genericAdapter } from './generic';
 import { upworkAdapter } from './upwork';
 import type { Adapter } from './types';
@@ -20,6 +20,11 @@ export function extractJobPost(
     return genericAdapter.extract(document, url);
   }
   return adapter.extract(document, url);
+}
+
+/** The open conversation thread, on sites that have one (Fiverr inbox). */
+export function extractConversation(document: Document, url: string): Conversation | null {
+  return extractFiverrConversation(document, url);
 }
 
 export { fiverrAdapter, upworkAdapter, genericAdapter };

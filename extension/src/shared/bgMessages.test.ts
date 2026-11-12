@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { isCancelGenerateMessage, isGenerateMessage, withSignOff } from './bgMessages';
+import {
+  isAnalyzeMessage,
+  isCancelGenerateMessage,
+  isGenerateMessage,
+  withSignOff,
+} from './bgMessages';
 
 describe('background messages', () => {
   it('recognises generate and cancel messages', () => {
@@ -16,6 +21,10 @@ describe('background messages', () => {
     expect(isGenerateMessage({ type: 'GET_JOB_POST' })).toBe(false);
     expect(isCancelGenerateMessage({ type: 'PP_CANCEL_GENERATE', requestId: 'r' })).toBe(true);
     expect(isCancelGenerateMessage({ type: 'PP_CANCEL_GENERATE' })).toBe(false);
+    expect(
+      isAnalyzeMessage({ type: 'PP_ANALYZE', requestId: 'r', payload: {}, conversation: {} }),
+    ).toBe(true);
+    expect(isAnalyzeMessage({ type: 'PP_ANALYZE', requestId: 'r' })).toBe(false);
   });
 
   it('appends the sign-off once', () => {

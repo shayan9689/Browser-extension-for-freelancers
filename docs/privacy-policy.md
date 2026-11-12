@@ -1,6 +1,6 @@
 # Privacy Policy — ProposalPilot
 
-**Last updated:** 2026-11-12
+**Last updated:** 2026-11-13
 
 ProposalPilot helps freelancers draft proposals from the job post they are viewing.
 
@@ -12,11 +12,13 @@ When you click **Generate proposal**, the extension sends:
 - The profile text you saved locally (name, headline, skills, experience, rate, highlights)
 - An anonymous `install_id` used only for rate limiting
 
+When you click **Check for project** in a Fiverr inbox conversation, the extension sends the messages of that open conversation so the AI can tell whether the client described a project. Each message is labelled only as "client" or "me": usernames and display names are removed first. The conversation is not stored or logged on the server.
+
 The ProposalPilot server also sees your IP address, as any web server does. It is used only for rate limiting and abuse prevention.
 
 ## What we do **not** do
 
-- We do **not** store or log job text or profile text on the server
+- We do **not** store or log job text, conversation messages or profile text on the server
 - We do **not** create user accounts
 - We do **not** sell your data
 - We do **not** use your data for creditworthiness, lending, or unrelated advertising

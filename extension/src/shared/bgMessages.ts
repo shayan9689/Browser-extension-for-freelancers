@@ -1,6 +1,6 @@
 /** Messages from the popup / side panel to the background worker. */
-import type { Length, ProposalApiRequest, Tone } from './api';
-import type { JobPost } from './types';
+import type { ConversationApiRequest, Length, ProposalApiRequest, Tone } from './api';
+import type { Conversation, JobPost } from './types';
 
 export type GenerateMessage = {
   type: 'PP_GENERATE';
@@ -11,6 +11,13 @@ export type GenerateMessage = {
   tone: Tone;
   length: Length;
   signOff?: string;
+};
+
+export type AnalyzeMessage = {
+  type: 'PP_ANALYZE';
+  requestId: string;
+  payload: ConversationApiRequest;
+  conversation: Conversation;
 };
 
 export type CancelGenerateMessage = {
@@ -35,6 +42,17 @@ export function isGenerateMessage(msg: unknown): msg is GenerateMessage {
     typeof msg.job === 'object' &&
     msg.job !== null &&
     typeof msg.editedDescription === 'string'
+  );
+}
+
+export function isAnalyzeMessage(msg: unknown): msg is AnalyzeMessage {
+  return (
+    hasType(msg, 'PP_ANALYZE') &&
+    typeof msg.requestId === 'string' &&
+    typeof msg.payload === 'object' &&
+    msg.payload !== null &&
+    typeof msg.conversation === 'object' &&
+    msg.conversation !== null
   );
 }
 

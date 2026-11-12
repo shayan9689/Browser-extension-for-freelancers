@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { GenerateMessage, CancelGenerateMessage } from '../shared/bgMessages';
+import type {
+  AnalyzeMessage,
+  CancelGenerateMessage,
+  GenerateMessage,
+} from '../shared/bgMessages';
 import { getSelectedTextFromActiveTab, sendToActiveTab } from '../shared/messages';
 import {
   PANEL_STATE_KEY,
   isPersistedPanel,
   readPanel,
   restorableState,
+  stateUrl,
 } from '../shared/panelState';
 import {
   PENDING_SELECTION_KEY,
@@ -13,10 +18,12 @@ import {
   isPendingSelection,
 } from '../shared/pending';
 import { loadStore, profileIsEmpty, type Profile } from '../shared/storage';
-import type { JobPost } from '../shared/types';
+import type { Conversation, JobPost } from '../shared/types';
 import { jobFromText } from './jobFromText';
 import { usePanelStore, type PanelState } from './store';
 import {
+  AnalyzingView,
+  ConversationView,
   DetectingView,
   ErrorView,
   Footer,
@@ -25,6 +32,7 @@ import {
   Header,
   IdleView,
   JobReadyView,
+  NoProjectView,
   ProfileBanner,
   ResultView,
   Stepper,
@@ -72,6 +80,10 @@ function activeStep(state: PanelState): StepIndex {
       return 2;
     case 'error':
       return state.job ? 1 : 0;
+    case 'conversation':
+    case 'analyzing':
+    case 'no-project':
+      return 0;
     default:
       return 0;
   }
@@ -186,14 +198,19 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
       if (mode !== 'popup') return;
 
       const now = usePanelStore.getState().state;
-      if (now.status === 'generating') return;
+      if (now.status === 'generating' || now.status === 'analyzing') return;
+      const tabUrl = await activeTabUrl();
+      // A finished draft is never replaced automatically (e.g. on the page
+      // where the user pastes it); "New job" starts over.
+      const replaceable =
+        now.status !== 'result' && (now.status === 'idle' || stateUrl(now) !== tabUrl);
 
       const selected = await readSelectionQuietly();
       if (cancelled) return;
       if (selected.trim()) {
-        const job = jobFromText(selected, await activeTabUrl());
+        const job = jobFromText(selected, tabUrl);
         const same = job && currentJob(now)?.description === job.description;
-        if (job && !same) {
+        if (job && !same && now.status !== 'result') {
           usePanelStore.getState().setState({
             status: 'ready',
             job,
@@ -203,19 +220,26 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
         return;
       }
 
-      if (now.status === 'idle') {
-        // On Fiverr / Upwork job pages, detect silently; elsewhere stay idle.
+      if (replaceable) {
+        // Fiverr / Upwork: detect the job or chat silently (no network);
+        // elsewhere keep the current screen.
         try {
           const res = await sendToActiveTab({ type: 'GET_JOB_POST' });
-          if (!cancelled && res.type === 'JOB_POST') {
+          if (cancelled) return;
+          if (res.type === 'JOB_POST') {
             usePanelStore.getState().setState({
               status: 'ready',
               job: res.job,
               editedDescription: res.job.description,
             });
+          } else if (res.type === 'CONVERSATION') {
+            usePanelStore.getState().setState({
+              status: 'conversation',
+              conversation: res.conversation,
+            });
           }
         } catch {
-          // stay idle
+          // keep the current screen
         }
       }
     })();
@@ -286,6 +310,11 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
             job: response.job,
             editedDescription: response.job.description,
           });
+          return;
+        }
+
+        if (response.type === 'CONVERSATION') {
+          setState({ status: 'conversation', conversation: response.conversation });
           return;
         }
 
@@ -401,6 +430,42 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
     }
   }, [commit, installId, length, profile, setState, state, tone]);
 
+  const checkConversation = useCallback(
+    async (conversation: Conversation) => {
+      const requestId = crypto.randomUUID();
+      await commit({ status: 'analyzing', conversation, requestId });
+      const message: AnalyzeMessage = {
+        type: 'PP_ANALYZE',
+        requestId,
+        conversation,
+        payload: {
+          install_id: installId || crypto.randomUUID(),
+          platform: conversation.platform,
+          messages: conversation.messages,
+        },
+      };
+      try {
+        await chrome.runtime.sendMessage(message);
+      } catch {
+        setState({
+          status: 'error',
+          error: { code: 'NETWORK', message: 'Could not start the check. Reload the extension.' },
+        });
+      }
+    },
+    [commit, installId, setState],
+  );
+
+  const cancelAnalysis = () => {
+    if (state.status !== 'analyzing') return;
+    const message: CancelGenerateMessage = {
+      type: 'PP_CANCEL_GENERATE',
+      requestId: state.requestId,
+    };
+    void chrome.runtime.sendMessage(message).catch(() => undefined);
+    setState({ status: 'conversation', conversation: state.conversation });
+  };
+
   const cancelGenerate = () => {
     if (state.status !== 'generating') return;
     const message: CancelGenerateMessage = {
@@ -413,6 +478,7 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
 
   const backToIdle = () => {
     if (state.status === 'generating') cancelGenerate();
+    if (state.status === 'analyzing') cancelAnalysis();
     setState({ status: 'idle' });
   };
 
@@ -443,6 +509,12 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
     switch (state.status) {
       case 'detecting':
         return 'Detecting job post';
+      case 'conversation':
+        return 'Conversation found';
+      case 'analyzing':
+        return 'Checking the conversation for a project';
+      case 'no-project':
+        return 'No project discussed in this chat';
       case 'ready':
         return 'Job post ready';
       case 'generating':
@@ -507,6 +579,26 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
           ) : null}
 
           {state.status === 'detecting' ? <DetectingView /> : null}
+
+          {state.status === 'conversation' ? (
+            <ConversationView
+              conversation={state.conversation}
+              onCheck={() => void checkConversation(state.conversation)}
+              onBack={backToIdle}
+            />
+          ) : null}
+
+          {state.status === 'analyzing' ? (
+            <AnalyzingView conversation={state.conversation} onCancel={cancelAnalysis} />
+          ) : null}
+
+          {state.status === 'no-project' ? (
+            <NoProjectView
+              reason={state.reason}
+              onRecheck={() => void detectJob(false)}
+              onPaste={pasteText}
+            />
+          ) : null}
 
           {state.status === 'ready' ? (
             <JobReadyView

@@ -1,10 +1,13 @@
-import { ApiError, generateProposal } from '../src/shared/api';
+import { ApiError, analyzeConversation, generateProposal } from '../src/shared/api';
 import {
+  isAnalyzeMessage,
   isCancelGenerateMessage,
   isGenerateMessage,
   withSignOff,
+  type AnalyzeMessage,
   type GenerateMessage,
 } from '../src/shared/bgMessages';
+import { jobFromAnalysis } from '../src/shared/conversation';
 import { readPanel, writePanel, type PanelState } from '../src/shared/panelState';
 import {
   CONTEXT_MENU_ID,
@@ -19,13 +22,11 @@ const running = new Map<string, AbortController>();
 /** Write the outcome only if the UI is still waiting for this request. */
 async function finishIfCurrent(requestId: string, next: PanelState): Promise<boolean> {
   const saved = await readPanel();
-  if (
-    !saved ||
-    saved.state.status !== 'generating' ||
-    saved.state.requestId !== requestId
-  ) {
-    return false;
-  }
+  const waiting =
+    saved &&
+    (saved.state.status === 'generating' || saved.state.status === 'analyzing') &&
+    saved.state.requestId === requestId;
+  if (!saved || !waiting) return false;
   await writePanel({ ...saved, state: next, updatedAt: Date.now() });
   return true;
 }
@@ -64,6 +65,38 @@ async function runGeneration(msg: GenerateMessage): Promise<void> {
         ? { code: err.code, message: err.message, retryAfterSeconds: err.retryAfterSeconds }
         : { code: 'NETWORK', message: 'Unexpected error while generating.' };
     await finishIfCurrent(msg.requestId, { status: 'error', error, job, editedDescription });
+  } finally {
+    running.delete(msg.requestId);
+  }
+}
+
+async function runAnalysis(msg: AnalyzeMessage): Promise<void> {
+  const controller = new AbortController();
+  running.set(msg.requestId, controller);
+  const { conversation } = msg;
+  try {
+    const analysis = await analyzeConversation(msg.payload, controller.signal);
+    if (analysis.has_project) {
+      const job = jobFromAnalysis(conversation, analysis);
+      await finishIfCurrent(msg.requestId, {
+        status: 'ready',
+        job,
+        editedDescription: job.description,
+      });
+    } else {
+      await finishIfCurrent(msg.requestId, {
+        status: 'no-project',
+        conversation,
+        reason: analysis.reason,
+      });
+    }
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') return;
+    const error =
+      err instanceof ApiError
+        ? { code: err.code, message: err.message, retryAfterSeconds: err.retryAfterSeconds }
+        : { code: 'NETWORK', message: 'Unexpected error while checking the chat.' };
+    await finishIfCurrent(msg.requestId, { status: 'error', error });
   } finally {
     running.delete(msg.requestId);
   }
@@ -118,6 +151,11 @@ export default defineBackground(() => {
     if (!fromOwnPage) return false;
     if (isGenerateMessage(message)) {
       void runGeneration(message);
+      sendResponse({ ok: true });
+      return false;
+    }
+    if (isAnalyzeMessage(message)) {
+      void runAnalysis(message);
       sendResponse({ ok: true });
       return false;
     }

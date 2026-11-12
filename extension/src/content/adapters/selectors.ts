@@ -17,6 +17,18 @@ export const fiverrBriefSelectors = {
   budgetIcon: '[data-track-tag="coins_icon"]',
 } as const;
 
+/** Fiverr inbox conversation (all messages of the open thread). */
+export const fiverrChatSelectors = {
+  message: '.message',
+  /** data-track-value holds the sender's username */
+  avatar: '[data-track-tag="avatar"]',
+  contactList: '[data-testid="contact"]',
+  /** Right-hand pane about the other person */
+  detailsPane: '[data-testid="details-pane"]',
+  /** Sender name, time and action buttons inside a message: not message text */
+  chrome: '[data-track-tag="avatar"], time, button, svg, [aria-label="Actions"]',
+} as const;
+
 export const fiverrSelectors = {
   /** Primary job title heading on buyer request / job detail pages */
   title: [

@@ -1,4 +1,4 @@
-import type { ExtractError, JobPost } from '../../shared/types';
+import type { ChatMessage, Conversation, ExtractError, JobPost } from '../../shared/types';
 import {
   allTexts,
   collapseWhitespace,
@@ -7,7 +7,7 @@ import {
   normalizeDescription,
   textWithBreaks,
 } from './normalize';
-import { fiverrBriefSelectors, fiverrSelectors } from './selectors';
+import { fiverrBriefSelectors, fiverrChatSelectors, fiverrSelectors } from './selectors';
 import type { Adapter } from './types';
 
 function text(el: Element | null | undefined): string {
@@ -54,6 +54,86 @@ function extractBrief(document: Document, url: string): JobPost | null {
     skills: [],
     extractedAt: new Date().toISOString(),
     truncated,
+  };
+}
+
+/** Limits that keep a request inside the backend's conversation size cap. */
+const CHAT_MAX_MESSAGES = 60;
+const CHAT_MAX_MESSAGE_CHARS = 3_900;
+const CHAT_MAX_TOTAL_CHARS = 22_000;
+
+function avatarUser(el: Element | null | undefined): string {
+  return el?.getAttribute('data-track-value')?.trim() ?? '';
+}
+
+/** Message body without the sender's name, time and buttons. */
+function messageText(node: Element): string {
+  const clone = node.cloneNode(true) as Element;
+  // A message with an avatar starts with the sender's display name; grouped
+  // follow-up messages have neither.
+  if (clone.querySelector(fiverrChatSelectors.avatar)) {
+    clone.querySelector('p[data-track-tag="typography"]')?.remove();
+  }
+  clone.querySelectorAll(fiverrChatSelectors.chrome).forEach((el) => el.remove());
+  return collapseWhitespace(textWithBreaks(clone));
+}
+
+/**
+ * All messages of the open Fiverr inbox thread, labelled "client" / "me".
+ * Usernames are used only to tell the two people apart and are not returned.
+ */
+export function extractFiverrConversation(
+  document: Document,
+  url: string,
+): Conversation | null {
+  if (!isInbox(url)) return null;
+  const nodes = Array.from(document.querySelectorAll(fiverrChatSelectors.message));
+  if (!nodes.length) return null;
+
+  // The other person: shown in the details pane (fallback: any avatar outside
+  // messages and the contact list that also sent a message).
+  const senders = nodes.map((n) => avatarUser(n.querySelector(fiverrChatSelectors.avatar)));
+  let client = avatarUser(
+    document.querySelector(`${fiverrChatSelectors.detailsPane} ${fiverrChatSelectors.avatar}`),
+  );
+  if (!client || !senders.includes(client)) {
+    // You: the first avatar on the page (top navigation), outside the thread.
+    const me = avatarUser(
+      Array.from(document.querySelectorAll(fiverrChatSelectors.avatar)).find(
+        (el) =>
+          !el.closest(fiverrChatSelectors.message) &&
+          !el.closest(fiverrChatSelectors.contactList),
+      ),
+    );
+    client = senders.find((s) => s && s !== me) ?? '';
+  }
+
+  const messages: ChatMessage[] = [];
+  let lastSender = '';
+  nodes.forEach((node, i) => {
+    const sender = senders[i] || lastSender; // grouped messages repeat no avatar
+    lastSender = sender;
+    const text = messageText(node).slice(0, CHAT_MAX_MESSAGE_CHARS);
+    if (!text) return;
+    messages.push({ role: sender && sender === client ? 'client' : 'me', text });
+  });
+
+  // Keep the most recent messages within the size limits.
+  const kept: ChatMessage[] = [];
+  let total = 0;
+  for (const m of messages.slice(-CHAT_MAX_MESSAGES).reverse()) {
+    if (total + m.text.length > CHAT_MAX_TOTAL_CHARS) break;
+    total += m.text.length;
+    kept.unshift(m);
+  }
+  if (!kept.length) return null;
+
+  return {
+    platform: 'fiverr',
+    url,
+    messages: kept,
+    clientMessages: kept.filter((m) => m.role === 'client').length,
+    extractedAt: new Date().toISOString(),
   };
 }
 

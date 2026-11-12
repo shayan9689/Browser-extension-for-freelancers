@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { Length, ProposalApiResponse, Tone } from '../shared/api';
-import type { JobPost } from '../shared/types';
+import type { Conversation, JobPost } from '../shared/types';
 import {
   IconAlert,
   IconArrowLeft,
@@ -625,6 +625,119 @@ export function ErrorView(props: {
         Retry
       </button>
       {props.extra}
+    </section>
+  );
+}
+
+/* ---------------- Conversations (Fiverr inbox) ---------------- */
+
+const CHAT_PLATFORM: Record<Conversation['platform'], string> = {
+  fiverr: 'Fiverr chat',
+  upwork: 'Upwork chat',
+  generic: 'Chat',
+};
+
+export function ConversationView(props: {
+  conversation: Conversation;
+  onCheck: () => void;
+  onBack: () => void;
+}) {
+  const { conversation } = props;
+  const lastClient = [...conversation.messages].reverse().find((m) => m.role === 'client');
+  const preview = lastClient
+    ? lastClient.text.length > 160
+      ? `${lastClient.text.slice(0, 159).trimEnd()}…`
+      : lastClient.text
+    : '';
+  return (
+    <section className="pp-stagger flex flex-col gap-3">
+      <div className="pp-card pp-card-glow flex flex-col gap-4 p-4">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="pp-badge">{CHAT_PLATFORM[conversation.platform]}</span>
+          <span className="pp-badge">
+            {conversation.messages.length} messages · {conversation.clientMessages} from client
+          </span>
+        </div>
+        <div>
+          <h2 className="text-[15px] leading-snug font-bold tracking-tight">Conversation found</h2>
+          <p className="pp-muted mt-1 text-[13px] leading-relaxed">
+            Check whether the client has described a project in this chat. If they have, you get
+            the details and can draft a reply.
+          </p>
+        </div>
+        {preview ? (
+          <blockquote className="rounded-xl border border-[var(--pp-border)] bg-[var(--pp-surface-2)] px-3 py-2.5 text-xs leading-relaxed">
+            <span className="pp-label mb-1 block">Latest from client</span>
+            <span className="pp-muted">“{preview}”</span>
+          </blockquote>
+        ) : null}
+        <button
+          type="button"
+          className="pp-btn pp-btn-primary pp-btn-lg pp-btn-block"
+          onClick={props.onCheck}
+        >
+          <IconSearch />
+          Check for project
+        </button>
+        <p className="pp-faint flex items-start gap-1.5 text-[11px] leading-relaxed">
+          <IconShield size={12} className="mt-0.5 shrink-0" />
+          The chat is sent to the AI only when you click, with names removed. It is not stored.
+        </p>
+      </div>
+      <button type="button" className="pp-btn pp-btn-ghost pp-btn-sm self-start" onClick={props.onBack}>
+        <IconArrowLeft size={14} />
+        Different job
+      </button>
+    </section>
+  );
+}
+
+export function AnalyzingView(props: { conversation: Conversation; onCancel: () => void }) {
+  return (
+    <section className="pp-card pp-card-glow pp-enter flex flex-col gap-4 p-4" aria-busy="true">
+      <div className="flex items-center gap-3.5">
+        <div className="pp-orb">
+          <IconSearch size={18} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">Reading the conversation…</p>
+          <p className="pp-muted truncate text-xs">
+            {props.conversation.messages.length} messages · looking for project details
+          </p>
+        </div>
+      </div>
+      <div className="pp-progress" />
+      <button type="button" className="pp-btn pp-btn-secondary pp-btn-block" onClick={props.onCancel}>
+        Cancel
+      </button>
+    </section>
+  );
+}
+
+export function NoProjectView(props: {
+  reason: string;
+  onRecheck: () => void;
+  onPaste: (text: string) => void;
+}) {
+  return (
+    <section className="pp-stagger flex flex-col gap-3">
+      <div className="pp-notice pp-notice-info flex items-start gap-3" role="status">
+        <span className="mt-0.5 text-sky-400">
+          <IconInfo />
+        </span>
+        <div className="flex-1 text-xs leading-relaxed">
+          <p className="pp-notice-title">No project discussed yet</p>
+          <p className="pp-muted mt-0.5">
+            This chat is just a simple conversation. The client hasn&apos;t described any work to
+            be done.
+          </p>
+          {props.reason ? <p className="pp-faint mt-1.5">AI: {props.reason}</p> : null}
+          <button type="button" className="pp-link mt-1.5 text-xs" onClick={props.onRecheck}>
+            Check again
+          </button>
+        </div>
+      </div>
+      <PasteBox onSubmit={props.onPaste} />
     </section>
   );
 }

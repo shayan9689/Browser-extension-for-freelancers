@@ -6,7 +6,7 @@
  * chrome.storage.session and generation runs in the background worker.
  */
 import type { Length, ProposalApiResponse, Tone } from './api';
-import type { JobPost } from './types';
+import type { Conversation, JobPost } from './types';
 
 export type UiError = {
   code: string;
@@ -17,6 +17,10 @@ export type UiError = {
 export type PanelState =
   | { status: 'idle' }
   | { status: 'detecting' }
+  /** A chat was found; it is sent to the AI only when the user asks. */
+  | { status: 'conversation'; conversation: Conversation }
+  | { status: 'analyzing'; conversation: Conversation; requestId: string }
+  | { status: 'no-project'; conversation: Conversation; reason: string }
   | { status: 'ready'; job: JobPost; editedDescription: string }
   | {
       status: 'generating';
@@ -52,7 +56,17 @@ export const PANEL_STATE_KEY = 'panelState';
 /** A "generating" screen older than this was orphaned (worker restarted). */
 export const GENERATING_STALE_MS = 90_000;
 
-const STATUSES = new Set(['idle', 'detecting', 'ready', 'generating', 'result', 'error']);
+const STATUSES = new Set([
+  'idle',
+  'detecting',
+  'conversation',
+  'analyzing',
+  'no-project',
+  'ready',
+  'generating',
+  'result',
+  'error',
+]);
 
 export function isPersistedPanel(value: unknown): value is PersistedPanel {
   if (typeof value !== 'object' || value === null) return false;
@@ -75,6 +89,9 @@ export function restorableState(saved: PersistedPanel, now: number = Date.now())
   if (state.status === 'detecting') return { status: 'idle' };
   if (state.status === 'generating' && now - saved.updatedAt > GENERATING_STALE_MS) {
     return { status: 'ready', job: state.job, editedDescription: state.editedDescription };
+  }
+  if (state.status === 'analyzing' && now - saved.updatedAt > GENERATING_STALE_MS) {
+    return { status: 'conversation', conversation: state.conversation };
   }
   return state;
 }
@@ -101,4 +118,11 @@ export async function writePanel(panel: PersistedPanel): Promise<void> {
   } catch {
     // Session storage is a convenience; the UI keeps working without it.
   }
+}
+
+/** The page a state belongs to, used to notice the user moved to another job. */
+export function stateUrl(state: PanelState): string | undefined {
+  if ('job' in state && state.job) return state.job.url;
+  if ('conversation' in state) return state.conversation.url;
+  return undefined;
 }

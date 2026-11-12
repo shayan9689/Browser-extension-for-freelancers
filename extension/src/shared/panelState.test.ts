@@ -3,6 +3,7 @@ import {
   GENERATING_STALE_MS,
   isPersistedPanel,
   restorableState,
+  stateUrl,
   type PersistedPanel,
 } from './panelState';
 import type { JobPost } from './types';
@@ -65,5 +66,24 @@ describe('panel state persistence', () => {
       length: 'short' as const,
     };
     expect(restorableState(saved(state))).toBe(state);
+  });
+
+  it('drops an orphaned chat check back to the conversation', () => {
+    const conversation = {
+      platform: 'fiverr' as const,
+      url: 'https://www.fiverr.com/inbox/x',
+      messages: [{ role: 'client' as const, text: 'hi' }],
+      clientMessages: 1,
+      extractedAt: '2026-11-13T00:00:00.000Z',
+    };
+    const analyzing = saved({ status: 'analyzing', conversation, requestId: 'a1' });
+    expect(restorableState(analyzing, 1_000 + 1_000).status).toBe('analyzing');
+    expect(restorableState(analyzing, 1_000 + GENERATING_STALE_MS + 1)).toEqual({
+      status: 'conversation',
+      conversation,
+    });
+    expect(stateUrl(analyzing.state)).toBe(conversation.url);
+    expect(stateUrl({ status: 'ready', job, editedDescription: 'D' })).toBe(job.url);
+    expect(stateUrl({ status: 'idle' })).toBeUndefined();
   });
 });

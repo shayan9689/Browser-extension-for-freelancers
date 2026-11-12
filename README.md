@@ -29,7 +29,7 @@ ProposalPilot reads the job post, writes a short proposal based only on your pro
 
 ## ✨ Features
 
-- 🎯 **Job detection** on Upwork (job pages and the Best matches slider) and Fiverr (custom order requests in your inbox)
+- 🎯 **Job detection** on Upwork (job pages and the Best matches slider) and Fiverr (reads your inbox chat and tells you if a project was discussed)
 - 🖱️ **Works on any site:** highlight text and open the popup, right-click → *Draft proposal with ProposalPilot*, or paste
 - ✍️ **Grounded drafts:** uses only facts from your profile, with a price, a delivery estimate and a question to ask the client
 - 🪟 **Floating popup** (`Alt+Shift+P`) that keeps your draft if it closes, plus a one-click side panel for long sessions

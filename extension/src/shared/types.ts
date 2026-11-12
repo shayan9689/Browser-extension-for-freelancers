@@ -12,6 +12,18 @@ export type JobPost = {
   truncated: boolean;
 };
 
+/** One chat message; the other person's name is never kept. */
+export type ChatMessage = { role: 'client' | 'me'; text: string };
+
+/** An open marketplace conversation (e.g. a Fiverr inbox thread). */
+export type Conversation = {
+  platform: Platform;
+  url: string;
+  messages: ChatMessage[];
+  clientMessages: number;
+  extractedAt: string;
+};
+
 export type ExtractErrorCode =
   | 'NOT_A_JOB_PAGE'
   | 'EXTRACTION_FAILED'

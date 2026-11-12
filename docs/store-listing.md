@@ -28,6 +28,7 @@ How it works:
 5. Edit, copy, and paste it yourself into the marketplace. ProposalPilot never submits for you.
 
 Privacy:
+- Fiverr chats are checked only when you click Check for project, with names removed.
 - Job text and your profile are sent to the ProposalPilot server and our AI provider (Groq) only when you click Generate, and are not stored on the server.
 - History and profile stay on your device.
 - No accounts. No auto-submit. No bulk scraping.
@@ -41,7 +42,8 @@ See `docs/permissions.md`.
 
 ## Data usage disclosure
 
-- Handles website content (job text from the page you view) and user-provided profile text.
+- Handles website content (job text from the page you view), personal communications (messages of an open Fiverr inbox conversation, only when the user clicks Check for project, with names removed) and user-provided profile text.
+- In the Chrome Web Store privacy tab, tick: Website content, Personal communications.
 - Data is not sold.
 - Data is not used for unrelated purposes.
 - Data is not used for creditworthiness or lending.

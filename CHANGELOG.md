@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Fiverr inbox: the open conversation is read automatically (locally). "Check for project" asks
+  the AI whether the client described a project; if so, its title, summary, requirements,
+  budget and deadline become the job card, otherwise the panel says it is just a simple chat
+- Backend `POST /v1/conversation` with a versioned prompt; messages are sent as client/me only,
+  with names removed, and are never stored or logged
+
 ## [1.0.2] - 2026-11-13
 
 ### Added
