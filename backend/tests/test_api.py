@@ -11,6 +11,12 @@ def test_health(client: TestClient) -> None:
     assert "version" in res.json()
 
 
+def test_health_head_for_uptime_monitors(client: TestClient) -> None:
+    res = client.head("/health")
+    assert res.status_code == 200
+    assert res.content == b""
+
+
 def test_proposals_fake_shape(client: TestClient) -> None:
     res = client.post("/v1/proposals", json=sample_body())
     assert res.status_code == 200

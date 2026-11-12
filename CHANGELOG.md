@@ -14,6 +14,10 @@ All notable changes to this project will be documented in this file.
 - Privacy policy and store listing name Groq as the AI provider
 - Deploy docs, launch checklist and runbook use only free services
 
+### Fixed
+
+- `/health` answers HEAD requests, so uptime monitors no longer see 405
+
 ## [1.0.0] - 2026-10-30
 
 ### Added

@@ -74,7 +74,8 @@ async def validation_handler(
     return error_json("INVALID_INPUT", str(exc.errors()[0]["msg"]), 422)
 
 
-@app.get("/health", response_model=HealthResponse)
+# HEAD too: uptime monitors (e.g. UptimeRobot) ping with HEAD by default.
+@app.api_route("/health", methods=["GET", "HEAD"], response_model=HealthResponse)
 async def health() -> HealthResponse:
     settings = get_settings()
     return HealthResponse(status="ok", version=settings.app_version)
