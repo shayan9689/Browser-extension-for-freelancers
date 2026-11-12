@@ -4,6 +4,7 @@ import re
 
 from pydantic import ValidationError
 
+from app.prompts.conversation import CONVERSATION_SYSTEM_PROMPT, build_conversation_prompt
 from app.prompts.proposal import (
     BANNED_PHRASES,
     SYSTEM_PROMPT,
@@ -11,7 +12,14 @@ from app.prompts.proposal import (
 )
 from app.providers.fake import FakeProvider
 from app.providers.http_llm import AnthropicProvider, HttpLLMError, OpenAIProvider
-from app.schemas import ProposalRequest, ProposalResponse, SuggestedPrice
+from app.schemas import (
+    CONVERSATION_JSON_SCHEMA,
+    ConversationAnalysis,
+    ConversationRequest,
+    ProposalRequest,
+    ProposalResponse,
+    SuggestedPrice,
+)
 
 logger = logging.getLogger("proposalpilot")
 
@@ -167,3 +175,77 @@ def generate_proposal(request: ProposalRequest, provider: Provider) -> ProposalR
         return fallback
 
     return _post_check(parsed, request)
+
+
+def analyze_conversation(
+    request: ConversationRequest, provider: Provider
+) -> ConversationAnalysis:
+    """Decide whether a chat contains a project and extract its details."""
+    logger.info(
+        "Analyzing conversation platform=%s messages=%d install=%s",
+        request.platform,
+        len(request.messages),
+        str(request.install_id)[:8],
+        extra={"request_id": "-"},
+    )
+    if isinstance(provider, FakeProvider):
+        return _finish_analysis(
+            ConversationAnalysis.model_validate(
+                json.loads(provider.analyze_from_request(request))
+            )
+        )
+
+    prompt = build_conversation_prompt(platform=request.platform, messages=request.messages)
+
+    def ask(text: str) -> ConversationAnalysis:
+        raw = provider.generate(
+            text, system=CONVERSATION_SYSTEM_PROMPT, json_schema=CONVERSATION_JSON_SCHEMA
+        )
+        if _looks_injected(raw, CONVERSATION_SYSTEM_PROMPT):
+            return ConversationAnalysis(
+                has_project=False,
+                reason="Could not analyze this chat safely. Select the project text instead.",
+            )
+        return ConversationAnalysis.model_validate(json.loads(_strip_fences(raw)))
+
+    try:
+        try:
+            return _finish_analysis(ask(prompt))
+        except (json.JSONDecodeError, ValidationError) as first_exc:
+            logger.warning(
+                "Invalid analysis output, retrying: %s",
+                _describe(first_exc),
+                extra={"request_id": "-"},
+            )
+            repair = "Your previous reply was not valid JSON. Reply with STRICT JSON only."
+            return _finish_analysis(ask(prompt + "\n\n" + repair))
+    except HttpLLMError as exc:
+        logger.warning("LLM call failed: %s", exc, extra={"request_id": "-"})
+        raise ValueError("UPSTREAM") from exc
+    except (json.JSONDecodeError, ValidationError) as exc:
+        logger.warning(
+            "Invalid analysis output after repair: %s",
+            _describe(exc),
+            extra={"request_id": "-"},
+        )
+        raise ValueError("INVALID_UPSTREAM") from exc
+
+
+def _strip_fences(raw: str) -> str:
+    cleaned = raw.strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+    return cleaned
+
+
+def _finish_analysis(analysis: ConversationAnalysis) -> ConversationAnalysis:
+    if not analysis.has_project:
+        return ConversationAnalysis(
+            has_project=False,
+            reason=analysis.reason or "No project has been discussed in this chat yet.",
+        )
+    if not analysis.title.strip():
+        analysis.title = "Project from conversation"
+    analysis.requirements = [r for r in analysis.requirements if r.strip()][:8]
+    return analysis

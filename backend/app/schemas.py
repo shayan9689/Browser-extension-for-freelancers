@@ -1,7 +1,7 @@
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class JobInput(BaseModel):
@@ -98,6 +98,87 @@ PROPOSAL_JSON_SCHEMA: dict = {
         "delivery_days": {"type": "integer"},
         "questions_to_ask": {"type": "array", "items": {"type": "string"}},
         "warnings": {"type": "array", "items": {"type": "string"}},
+    },
+}
+
+
+CONVERSATION_MAX_CHARS = 24_000
+
+
+def _strip_controls(value: object) -> object:
+    if isinstance(value, str):
+        return "".join(ch for ch in value if ch in ("\n", "\t") or ord(ch) >= 32)
+    return value
+
+
+class ConversationMessage(BaseModel):
+    """One chat message; names are replaced by roles before sending."""
+
+    role: Literal["client", "me"]
+    text: str = Field(min_length=1, max_length=4_000)
+
+    _clean = field_validator("text", mode="before")(_strip_controls)
+
+
+class ConversationRequest(BaseModel):
+    install_id: UUID
+    platform: Literal["fiverr", "upwork", "generic"] = "fiverr"
+    messages: list[ConversationMessage] = Field(min_length=1, max_length=80)
+
+    @model_validator(mode="after")
+    def limit_total_size(self) -> "ConversationRequest":
+        if sum(len(m.text) for m in self.messages) > CONVERSATION_MAX_CHARS:
+            raise ValueError("Conversation is too long")
+        return self
+
+
+class ConversationAnalysis(BaseModel):
+    has_project: bool
+    title: str = ""
+    summary: str = ""
+    requirements: list[str] = Field(default_factory=list)
+    budget_text: str | None = None
+    deadline: str | None = None
+    reason: str = ""
+
+    @field_validator("requirements", mode="before")
+    @classmethod
+    def coerce_list(cls, value: object) -> object:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            return [value] if value.strip() else []
+        return value
+
+    @field_validator("budget_text", "deadline", mode="before")
+    @classmethod
+    def empty_to_none(cls, value: object) -> object:
+        if isinstance(value, str) and value.strip().lower() in ("", "none", "null", "n/a"):
+            return None
+        return value
+
+
+# Strict JSON schema for OpenAI Structured Outputs; mirrors ConversationAnalysis.
+CONVERSATION_JSON_SCHEMA: dict = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": [
+        "has_project",
+        "title",
+        "summary",
+        "requirements",
+        "budget_text",
+        "deadline",
+        "reason",
+    ],
+    "properties": {
+        "has_project": {"type": "boolean"},
+        "title": {"type": "string"},
+        "summary": {"type": "string"},
+        "requirements": {"type": "array", "items": {"type": "string"}},
+        "budget_text": {"type": ["string", "null"]},
+        "deadline": {"type": ["string", "null"]},
+        "reason": {"type": "string"},
     },
 }
 

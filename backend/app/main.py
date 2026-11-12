@@ -14,8 +14,15 @@ from app.middleware import RequestSizeLimitMiddleware
 from app.providers import get_provider
 from app.providers.fake import FakeProvider
 from app.rate_limit import InMemoryRateLimiter, RedisRateLimiter
-from app.schemas import ErrorResponse, HealthResponse, ProposalRequest, ProposalResponse
-from app.service import generate_proposal
+from app.schemas import (
+    ConversationAnalysis,
+    ConversationRequest,
+    ErrorResponse,
+    HealthResponse,
+    ProposalRequest,
+    ProposalResponse,
+)
+from app.service import analyze_conversation, generate_proposal
 
 configure_logging()
 logging.getLogger().addFilter(RequestIdFilter())
@@ -96,18 +103,13 @@ async def ping_llm(request: Request) -> JSONResponse:
         return JSONResponse({"status": "fail"}, status_code=502)
 
 
-# Sync handler: FastAPI runs it in a threadpool, so the blocking LLM call
-# doesn't stall the event loop for other requests.
-@app.post("/v1/proposals", response_model=None)
-def create_proposal(
-    payload: ProposalRequest,
-    request: Request,
-) -> ProposalResponse | JSONResponse:
+def check_limits(request: Request, install_id: str) -> JSONResponse | None:
+    """Per-install/IP hourly limit and global daily cap; a 429 response if exceeded."""
     limiter: InMemoryRateLimiter | RedisRateLimiter = request.app.state.limiter
     daily: DailyRequestCap | RedisDailyCap = request.app.state.daily_cap
     # Client IP comes from X-Forwarded-For via uvicorn --proxy-headers.
     ip = request.client.host if request.client else "unknown"
-    allowed, retry_after = limiter.check(str(payload.install_id), ip)
+    allowed, retry_after = limiter.check(install_id, ip)
     if not allowed:
         resp = error_json(
             "RATE_LIMITED",
@@ -122,9 +124,43 @@ def create_proposal(
             "Daily request cap reached. Try again tomorrow.",
             429,
         )
+    return None
+
+
+# Sync handler: FastAPI runs it in a threadpool, so the blocking LLM call
+# doesn't stall the event loop for other requests.
+@app.post("/v1/proposals", response_model=None)
+def create_proposal(
+    payload: ProposalRequest,
+    request: Request,
+) -> ProposalResponse | JSONResponse:
+    limited = check_limits(request, str(payload.install_id))
+    if limited:
+        return limited
 
     try:
         return generate_proposal(payload, request.app.state.provider)
+    except ValueError:
+        return error_json("UPSTREAM", "Model returned an invalid response.", 502)
+    except Exception:
+        logging.getLogger("proposalpilot").exception(
+            "Unhandled error",
+            extra={"request_id": getattr(request.state, "request_id", "-")},
+        )
+        return error_json("INTERNAL", "Something went wrong.", 500)
+
+
+@app.post("/v1/conversation", response_model=None)
+def analyze_chat(
+    payload: ConversationRequest,
+    request: Request,
+) -> ConversationAnalysis | JSONResponse:
+    """Does this chat contain a project? Messages are never stored or logged."""
+    limited = check_limits(request, str(payload.install_id))
+    if limited:
+        return limited
+    try:
+        return analyze_conversation(payload, request.app.state.provider)
     except ValueError:
         return error_json("UPSTREAM", "Model returned an invalid response.", 502)
     except Exception:

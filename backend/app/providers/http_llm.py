@@ -29,7 +29,8 @@ class AnthropicProvider:
         self.api_key = api_key
         self.model = model or "claude-opus-5-5"
 
-    def generate(self, prompt: str, *, system: str = "") -> str:
+    def generate(self, prompt: str, *, system: str = "", json_schema: dict | None = None) -> str:
+        _ = json_schema  # Anthropic replies in JSON from the prompt alone.
         return self._call(prompt, system=system, attempt=1)
 
     def _call(self, prompt: str, *, system: str, attempt: int) -> str:
@@ -117,10 +118,11 @@ class OpenAIProvider:
         self.json_schema = json_schema
         self.base_url = base_url.rstrip("/")
 
-    def generate(self, prompt: str, *, system: str = "") -> str:
-        return self._call(prompt, system=system, attempt=1)
+    def generate(self, prompt: str, *, system: str = "", json_schema: dict | None = None) -> str:
+        """json_schema overrides the default schema for this call (OpenAI only)."""
+        return self._call(prompt, system=system, schema=json_schema or self.json_schema, attempt=1)
 
-    def _call(self, prompt: str, *, system: str, attempt: int) -> str:
+    def _call(self, prompt: str, *, system: str, schema: dict | None, attempt: int) -> str:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "content-type": "application/json",
@@ -138,10 +140,10 @@ class OpenAIProvider:
                     "json_schema": {
                         "name": "proposal",
                         "strict": True,
-                        "schema": self.json_schema,
+                        "schema": schema,
                     },
                 }
-                if self.json_schema
+                if schema
                 else {"type": "json_object"}
             ),
         }
@@ -154,11 +156,11 @@ class OpenAIProvider:
                 )
         except httpx.TimeoutException as exc:
             if attempt == 1:
-                return self._call(prompt, system=system, attempt=2)
+                return self._call(prompt, system=system, schema=schema, attempt=2)
             raise HttpLLMError("LLM timeout", retryable=True) from exc
 
         if res.status_code >= 500 and attempt == 1:
-            return self._call(prompt, system=system, attempt=2)
+            return self._call(prompt, system=system, schema=schema, attempt=2)
         if 400 <= res.status_code < 500:
             raise HttpLLMError(
                 f"LLM client error {res.status_code} ({_error_code(res)})",
