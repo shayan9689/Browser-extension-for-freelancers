@@ -11,18 +11,18 @@ Public URLs (GitHub Pages, serves `docs/`):
 ## A. Accounts and limits (15 min)
 
 - [x] Support inbox: supportextension9@gmail.com (in privacy policy and listing).
-- [ ] Groq console (https://console.groq.com/keys) → create a free API key for ProposalPilot.
+- [x] Groq console (https://console.groq.com/keys) → create a free API key for ProposalPilot.
       No card needed; do not add billing so it stays free.
 - [ ] Note the free-tier limits shown in the Groq console (Settings → Limits) for the model you use.
-- [ ] Generate an admin secret for `/v1/ping-llm`, e.g. `python -c "import secrets; print(secrets.token_urlsafe(32))"`.
+- [x] Generate an admin secret for `/v1/ping-llm`, e.g. `python -c "import secrets; print(secrets.token_urlsafe(32))"`.
 
 ## B. Deploy the backend on Render (Phase 9, ~20 min)
 
-1. [ ] render.com → sign in with GitHub → **New → Web Service** → pick
+1. [x] render.com → sign in with GitHub → **New → Web Service** → pick
        `shayan9689/Browser-extension-for-freelancers`.
-2. [ ] Settings: **Root Directory** `backend`, **Runtime** Docker, region nearest your users,
+2. [x] Settings: **Root Directory** `backend`, **Runtime** Docker, region nearest your users,
        instance type **Free** (it sleeps when idle; step 8 keeps it awake for free).
-3. [ ] Environment variables:
+3. [x] Environment variables:
 
        ENV=production
        LLM_PROVIDER=groq
@@ -35,12 +35,12 @@ Public URLs (GitHub Pages, serves `docs/`):
 
 4. [ ] Recommended: **New → Key Value** (free, same region) → copy its *internal* URL →
        add `REDIS_URL=<url>` to the web service.
-5. [ ] Health check path: `/health`. Create the service and wait for "Live".
-6. [ ] Backend URL: `https://proposalpilot-api-awbv.onrender.com`.
-7. [ ] Verify (gate):
+5. [x] Health check path: `/health`. Create the service and wait for "Live".
+6. [x] Backend URL: `https://proposalpilot-api-awbv.onrender.com`.
+7. [x] Verify (gate):
        - Open `https://<your-api>/health` on your phone with Wi-Fi off → `{"status":"ok",...}`
        - `curl -H "x-admin-secret: <secret>" https://<your-api>/v1/ping-llm` → `{"status":"ok"}`
-8. [ ] UptimeRobot (free) → New monitor → HTTP(s) → `https://<your-api>/health`, 5 min, email alert.
+8. [x] UptimeRobot (free) → New monitor → HTTP(s) → `https://<your-api>/health`, 5 min, email alert.
        The 5-minute ping also stops the free Render service from sleeping, so users and the store
        reviewer do not wait ~50 s for a cold start. One always-on free service fits in Render's
        monthly free hours.
@@ -48,7 +48,7 @@ Public URLs (GitHub Pages, serves `docs/`):
 
 ## C. Production build and real-browser test (Phase 10, ~30 min)
 
-The developer sets the GitHub repo variable `API_BASE_URL` and cuts the `v1.0.0` release; the
+The developer sets the GitHub repo variable `API_BASE_URL` and cuts the `v1.0.1` release; the
 release workflow builds and verifies the zip and attaches it to the GitHub Release. Then:
 
 1. [ ] Download the zip from the GitHub Release and unzip it into a folder.

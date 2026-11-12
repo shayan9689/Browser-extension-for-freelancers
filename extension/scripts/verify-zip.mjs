@@ -8,12 +8,16 @@ const zips = existsSync(outDir)
   ? readdirSync(outDir).filter((f) => f.endsWith('.zip'))
   : [];
 
-if (!zips.length) {
-  console.error('No zip found in .output — run npm run zip first');
+// Check the zip for the current package.json version, not a stale older one.
+const { version } = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8'));
+const zipName = zips.find((f) => f.endsWith(`-${version}-chrome.zip`));
+
+if (!zipName) {
+  console.error(`No zip for version ${version} in .output — run npm run zip first`);
   process.exit(1);
 }
 
-const zipPath = join(outDir, zips[0]);
+const zipPath = join(outDir, zipName);
 const size = statSync(zipPath).size;
 if (size > 5 * 1024 * 1024) {
   console.error(`Zip too large: ${size} bytes`);

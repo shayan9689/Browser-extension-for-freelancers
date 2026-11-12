@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.0.1] - 2026-11-12
 
 ### Added
 
@@ -17,6 +17,9 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - `/health` answers HEAD requests, so uptime monitors no longer see 405
+- "Use selected text" asks the content script first, so it works on tabs where Chrome has not
+  granted activeTab; errors show readable titles instead of raw codes
+- `verify-zip` checks the zip for the current version instead of the first zip in `.output`
 
 ## [1.0.0] - 2026-10-30
 

@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     daily_request_cap: int = 500
     redis_url: str = ""
     admin_ping_secret: str = ""
-    app_version: str = "1.0.0"
+    app_version: str = "1.0.1"
 
     def origins_list(self) -> list[str]:
         if not self.allowed_origins.strip():
