@@ -41,6 +41,7 @@ describe('panel store state machine', () => {
       status: 'generating',
       job,
       editedDescription: 'D',
+      requestId: 'r1',
     });
     expect(usePanelStore.getState().state.status).toBe('generating');
     usePanelStore.getState().setState({

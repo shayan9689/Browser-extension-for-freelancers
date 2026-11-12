@@ -22,7 +22,7 @@ ProposalPilot helps freelancers draft better proposals faster.
 
 How it works:
 1. Open a freelance job post in Chrome.
-2. Open the ProposalPilot side panel.
+2. Click the ProposalPilot toolbar icon (or press Alt+Shift+P).
 3. Detect the job on Fiverr or Upwork. On any other site, highlight the job text, right-click and choose "Draft proposal with ProposalPilot", or paste the text into the panel.
 4. Generate a draft proposal with a suggested price and delivery estimate.
 5. Edit, copy, and paste it yourself into the marketplace. ProposalPilot never submits for you.
@@ -53,8 +53,9 @@ No marketplace account is needed.
 1. Install the extension. The profile page opens automatically: fill in name, headline and at least one skill, then save.
 2. Open the demo job post: https://shayan9689.github.io/Browser-extension-for-freelancers/demo/job-post.html
 3. Select the job title and description with the mouse.
-4. Right-click the selection and choose **Draft proposal with ProposalPilot**. The side panel opens with the job ready.
-   (Alternative: open the panel from the toolbar icon, expand **Paste job text**, paste the text and click **Use this text**.)
+4. Click the ProposalPilot toolbar icon. The popup opens with the selected job ready.
+   (Also works: right-click the selection and choose **Draft proposal with ProposalPilot**.)
+   (Alternative: in the popup, expand **Paste job text**, paste the text and click **Use this text**.)
 5. Click **Generate proposal**. Expected: within ~20 seconds an editable draft appears with a suggested price and delivery estimate.
 6. Click **Copy**: the draft is placed on the clipboard. Nothing is ever submitted to any website.
 

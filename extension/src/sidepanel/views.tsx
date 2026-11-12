@@ -13,6 +13,7 @@ import {
   IconInfo,
   IconLogo,
   IconMouseRight,
+  IconPanelRight,
   IconQuestion,
   IconRefresh,
   IconSearch,
@@ -35,7 +36,7 @@ const PLATFORM_LABEL: Record<JobPost['platform'], string> = {
 
 /* ---------------- Header & chrome ---------------- */
 
-export function Header(props: { onSettings: () => void }) {
+export function Header(props: { onSettings: () => void; onOpenSidePanel?: () => void }) {
   return (
     <header className="flex items-center gap-3">
       <div className="pp-logo">
@@ -47,6 +48,17 @@ export function Header(props: { onSettings: () => void }) {
         </h1>
         <p className="pp-muted truncate text-xs">AI drafts from the job you are viewing</p>
       </div>
+      {props.onOpenSidePanel ? (
+        <button
+          type="button"
+          className="pp-icon-btn"
+          onClick={props.onOpenSidePanel}
+          aria-label="Open in side panel"
+          title="Open in side panel (stays open while you work)"
+        >
+          <IconPanelRight />
+        </button>
+      ) : null}
       <button
         type="button"
         className="pp-icon-btn"

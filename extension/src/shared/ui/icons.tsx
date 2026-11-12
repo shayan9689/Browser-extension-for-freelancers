@@ -200,3 +200,10 @@ export const IconQuestion = (p: IconProps) => (
     <path d="M12 17h.01" />
   </Base>
 );
+
+export const IconPanelRight = (p: IconProps) => (
+  <Base {...p}>
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M15 3v18" />
+  </Base>
+);

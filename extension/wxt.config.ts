@@ -18,6 +18,12 @@ export default defineConfig({
     action: {
       default_title: 'ProposalPilot',
     },
+    commands: {
+      _execute_action: {
+        suggested_key: { default: 'Alt+Shift+P' },
+        description: 'Open ProposalPilot',
+      },
+    },
     icons: {
       '16': 'icon/16.png',
       '32': 'icon/32.png',

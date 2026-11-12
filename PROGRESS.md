@@ -27,7 +27,7 @@ The 2026-10-30 re-audit fixed production-blocking issues; see CHANGELOG.
 | Permission | Why |
 |------------|-----|
 | `storage` | Save profile, settings, history, install_id |
-| `sidePanel` | Keep UI open while reading the job post |
+| `sidePanel` | Optional docked view ("Open in side panel" from the popup) |
 | `activeTab` | Read the current tab URL/title and selected text on demand |
 | `scripting` | Inject/query selection fallback when adapters fail |
 | `contextMenus` | Right-click "Draft proposal with ProposalPilot" on selected text (works on any site) |

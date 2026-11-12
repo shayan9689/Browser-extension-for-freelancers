@@ -15,20 +15,21 @@ A Chrome extension that reads the freelance job post you are viewing and drafts 
 
 ## Features
 
-- **Side panel UI** that stays open while you read the job: detect → generate → edit → copy
+- **Floating popup** from the toolbar icon (or Alt+Shift+P): detect → generate → edit → copy. Your draft is kept if the popup closes, and one click moves it to the side panel for longer sessions
+- **Works on any site:** highlight a job and click the icon, right-click "Draft proposal with ProposalPilot", or paste the text
 - **Job extraction** with per-site adapters and a "use selected text" fallback for any page
 - **Profile-grounded drafts:** the AI only uses facts from the profile you save
 - **Local-first:** profile and the last 50 proposals stay in `chrome.storage.local`, with export and delete
 - **Free to run:** works on the Groq or Gemini free tier and Render's free plan
 - **Hardened backend:** FastAPI holds the LLM key, with prompt-injection defence, per-user and per-IP rate limits, a global daily cost cap and optional Redis
-- **Minimal permissions:** `storage`, `sidePanel`, `activeTab`, `scripting`, no broad host access
+- **Minimal permissions:** `storage`, `sidePanel`, `activeTab`, `scripting`, `contextMenus`, no broad host access
 
 ## How it works
 
 ```mermaid
 flowchart LR
   Page[Job post] --> CS[Content script<br/>read-only]
-  CS --> Panel[Side panel]
+  CS --> Panel[Popup / side panel]
   Panel -->|job text + profile| API[FastAPI backend]
   API --> LLM[Groq free tier<br/>or Gemini / OpenAI / Anthropic]
   LLM --> API --> Panel

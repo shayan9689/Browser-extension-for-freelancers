@@ -99,6 +99,14 @@ body {
   background-attachment: fixed;
 }
 
+/* Toolbar popup: fixed width; Chrome caps the height at 600px and scrolls. */
+body.pp-popup {
+  width: 384px;
+  min-width: 384px;
+  min-height: 0;
+  background-attachment: scroll;
+}
+
 ::selection {
   background: rgba(45, 212, 191, 0.3);
 }

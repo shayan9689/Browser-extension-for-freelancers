@@ -15,5 +15,6 @@ Use before every release (and after Phase 8).
 - [ ] Resilience: Restart Chrome, reload extension, sleep and wake the service worker: still works.
 - [ ] Security: Job text containing 'ignore previous instructions' is not obeyed.
 - [ ] A11y: Keyboard-only run through the whole flow; focus visible; dark mode OK.
-- [ ] Perf: Side panel opens instantly; no console errors; no memory growth after 20 runs.
+- [ ] Popup: closing it (click outside) mid-generation and reopening shows the draft; "Open in side panel" keeps the same screen.
+- [ ] Perf: Popup and side panel open instantly; no console errors; no memory growth after 20 runs.
 - [ ] Production: Zip build against the production API passes the full flow.

@@ -6,10 +6,15 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- Right-click "Draft proposal with ProposalPilot" on selected text opens the side panel with the
-  job ready, on any website (new `contextMenus` permission)
-- "Paste job text" box in the side panel as a fallback that needs no page access
-- Redesigned side panel and settings: new theme with light/dark support, brand gradients,
+- Floating popup from the toolbar icon (Alt+Shift+P) replaces the always-docked side panel. The
+  screen and draft are kept in session storage, generation runs in the background worker so it
+  survives the popup closing, and "Open in side panel" docks the same screen for long sessions
+- Popup picks up the job automatically: selected text on any site (the popup grants activeTab),
+  or the job on Fiverr/Upwork pages
+- Right-click "Draft proposal with ProposalPilot" on selected text opens the popup with the job
+  ready, on any website (new `contextMenus` permission)
+- "Paste job text" box as a fallback that needs no page access
+- Redesigned popup/side panel and settings: new theme with light/dark support, brand gradients,
   progress stepper, animated generating state, price and delivery tiles, segmented tone/length
   controls, profile completeness meter, Enter-to-add skills and confirm before deleting data
 
@@ -22,6 +27,9 @@ All notable changes to this project will be documented in this file.
 - Upwork job detection failed on the current Upwork layout ("Couldn't find the job details").
   Selectors are now based on a real job page: title, all description paragraphs, hourly or
   fixed budget, experience level and skills; the page title is a fallback for the job title
+- Upwork jobs opened in the "Best matches" slider were reported as "No job post on this page".
+  The newer job viewer is now supported and read only inside the open slider (not the feed
+  behind it); line breaks in descriptions no longer glue words together
 
 ## [1.0.1] - 2026-11-12
 
