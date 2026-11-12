@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     llm_model: str = ""  # empty = provider default
     anthropic_api_key: str = ""
     openai_api_key: str = ""
+    groq_api_key: str = ""
+    gemini_api_key: str = ""
     allowed_origins: str = ""
     rate_limit_per_hour: int = 20
     daily_request_cap: int = 500

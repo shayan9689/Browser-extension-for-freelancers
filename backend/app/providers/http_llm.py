@@ -84,13 +84,38 @@ class AnthropicProvider:
         return "\n".join(texts).strip()
 
 
+OPENAI_BASE_URL = "https://api.openai.com/v1"
+
+# Free-tier providers that expose an OpenAI-compatible chat completions API.
+# name -> (base_url, default_model). Override the model with LLM_MODEL.
+OPENAI_COMPATIBLE: dict[str, tuple[str, str]] = {
+    "groq": ("https://api.groq.com/openai/v1", "openai/gpt-oss-120b"),
+    "gemini": (
+        "https://generativelanguage.googleapis.com/v1beta/openai",
+        "gemini-2.5-flash",
+    ),
+}
+
+
 class OpenAIProvider:
+    """OpenAI chat completions client; also used for OpenAI-compatible APIs.
+
+    With json_schema set, requests strict structured output (OpenAI only).
+    Without it, uses plain JSON mode, which Groq and Gemini support; the
+    service validates the reply and retries once if it is not valid JSON.
+    """
+
     def __init__(
-        self, api_key: str, model: str = "gpt-4o-mini", json_schema: dict | None = None
+        self,
+        api_key: str,
+        model: str = "gpt-4o-mini",
+        json_schema: dict | None = None,
+        base_url: str = OPENAI_BASE_URL,
     ) -> None:
         self.api_key = api_key
         self.model = model or "gpt-4o-mini"
         self.json_schema = json_schema
+        self.base_url = base_url.rstrip("/")
 
     def generate(self, prompt: str, *, system: str = "") -> str:
         return self._call(prompt, system=system, attempt=1)
@@ -123,7 +148,7 @@ class OpenAIProvider:
         try:
             with httpx.Client(timeout=30.0) as client:
                 res = client.post(
-                    "https://api.openai.com/v1/chat/completions",
+                    f"{self.base_url}/chat/completions",
                     headers=headers,
                     json=body,
                 )
@@ -150,4 +175,4 @@ class OpenAIProvider:
         return data["choices"][0]["message"]["content"].strip()
 
 
-ProviderName = Literal["fake", "anthropic", "openai"]
+ProviderName = Literal["fake", "anthropic", "openai", "groq", "gemini"]

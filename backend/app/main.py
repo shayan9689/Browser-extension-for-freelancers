@@ -30,7 +30,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.provider = get_provider(settings)
     if settings.env == "production" and isinstance(app.state.provider, FakeProvider):
         raise RuntimeError(
-            "Production needs LLM_PROVIDER=anthropic|openai and the matching API key"
+            "Production needs LLM_PROVIDER=groq|gemini|openai|anthropic "
+            "and the matching API key"
         )
     if settings.redis_url:
         import redis
