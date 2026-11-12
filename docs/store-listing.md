@@ -43,7 +43,7 @@ See `docs/permissions.md`.
 ## Data usage disclosure
 
 - Handles website content (job text from the page you view), personal communications (messages of an open Fiverr inbox conversation, only when the user clicks Check for project, with names removed) and user-provided profile text.
-- In the Chrome Web Store privacy tab, tick: Website content, Personal communications.
+- In the Chrome Web Store privacy tab, tick: Personally identifiable information (the name in the saved profile), Personal communications, Website content.
 - Data is not sold.
 - Data is not used for unrelated purposes.
 - Data is not used for creditworthiness or lending.
