@@ -88,6 +88,28 @@ describe('upwork 2026 layout', () => {
   });
 });
 
+describe('fiverr inbox custom order request', () => {
+  const url = 'https://www.fiverr.com/inbox/buyer_demo';
+
+  it('reads the brief message, budget and delivery', () => {
+    const result = extractJobPost(loadDocument('fiverr-inbox-brief.html'), url);
+    expect('title' in result).toBe(true);
+    if (!('title' in result)) return;
+    expect(result.platform).toBe('fiverr');
+    expect(result.title).toBe('Custom Order Request');
+    expect(result.budgetText).toBe('$120');
+    expect(result.description).toContain('landing page redesign for my bakery website. Milestone 1');
+    expect(result.description).toContain('Request details: Budget $120; 3 days delivery');
+    expect(result.description).not.toContain('Create an offer');
+  });
+
+  it('guides the user when the conversation has no brief', () => {
+    const doc = loadDocument('fiverr-inbox-brief.html');
+    doc.querySelector('[data-testid="brief-entry"]')?.remove();
+    expect(extractJobPost(doc, url)).toMatchObject({ code: 'NOT_A_JOB_PAGE' });
+  });
+});
+
 describe('upwork slider (job viewer) layout', () => {
   const url = 'https://www.upwork.com/nx/find-work/best-matches/details/~0123';
 

@@ -4,6 +4,19 @@
  * Avoid hashed / auto-generated class names.
  */
 
+/**
+ * Fiverr inbox: a buyer's "Custom Order Request" (brief) inside a conversation.
+ * Class names are hashed, so only data-testid / data-track-tag hooks are used.
+ */
+export const fiverrBriefSelectors = {
+  entry: '[data-testid="brief-entry"]',
+  body: '[data-testid="brief-body"]',
+  /** Specification values, e.g. "Budget $10" and "1 day delivery (…)" */
+  specValues: 'li section p',
+  /** The budget line sits next to a coins icon */
+  budgetIcon: '[data-track-tag="coins_icon"]',
+} as const;
+
 export const fiverrSelectors = {
   /** Primary job title heading on buyer request / job detail pages */
   title: [
