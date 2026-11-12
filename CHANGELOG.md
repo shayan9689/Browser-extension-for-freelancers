@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.0.2] - 2026-11-12
+## [1.0.2] - 2026-11-13
 
 ### Added
 
@@ -11,6 +11,8 @@ All notable changes to this project will be documented in this file.
   survives the popup closing, and "Open in side panel" docks the same screen for long sessions
 - Popup picks up the job automatically: selected text on any site (the popup grants activeTab),
   or the job on Fiverr/Upwork pages
+- Fiverr: drafts a reply to a buyer's Custom Order Request in the inbox, with its budget and
+  requested delivery
 - Right-click "Draft proposal with ProposalPilot" on selected text opens the popup with the job
   ready, on any website (new `contextMenus` permission)
 - "Paste job text" box as a fallback that needs no page access
