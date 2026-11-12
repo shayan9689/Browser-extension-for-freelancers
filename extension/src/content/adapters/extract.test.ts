@@ -88,6 +88,37 @@ describe('upwork 2026 layout', () => {
   });
 });
 
+describe('upwork slider (job viewer) layout', () => {
+  const url = 'https://www.upwork.com/nx/find-work/best-matches/details/~0123';
+
+  it('reads the open job, not the feed behind it', () => {
+    const result = extractJobPost(loadDocument('upwork-slider-2026.html'), url);
+    expect('title' in result).toBe(true);
+    if (!('title' in result)) return;
+    expect(result.platform).toBe('upwork');
+    expect(result.title).toBe('Telegram bot and API integration for a booking app');
+    expect(result.skills).toEqual(['Bot Development', 'Node.js', 'API Integration']);
+    expect(result.experienceLevel).toBe('Expert');
+    expect(result.budgetText).toBe('$25.00 - $45.00 · Hourly');
+  });
+
+  it('keeps words apart at line breaks and drops the More toggle', () => {
+    const result = extractJobPost(loadDocument('upwork-slider-2026.html'), url);
+    if (!('description' in result)) throw new Error('expected a job');
+    expect(result.description.startsWith('Hello, We need a Telegram bot')).toBe(true);
+    expect(result.description).toContain('REST API. - Node.js preferred - Must handle payments');
+    expect(result.description).not.toMatch(/More$/);
+  });
+
+  it('treats the feed without an open job as not a job page', () => {
+    const doc = loadDocument('upwork-slider-2026.html');
+    doc.querySelector('[data-test="drawer"]')?.remove();
+    expect(extractJobPost(doc, 'https://www.upwork.com/nx/find-work/')).toMatchObject({
+      code: 'NOT_A_JOB_PAGE',
+    });
+  });
+});
+
 describe('non-job pages', () => {
   it('returns NOT_A_JOB_PAGE for fiverr home', () => {
     const doc = loadDocument('fiverr-home.html');

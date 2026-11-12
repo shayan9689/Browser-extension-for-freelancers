@@ -23,7 +23,7 @@ export function normalizeDescription(raw: string): {
 }
 
 export function firstText(
-  doc: Document,
+  doc: ParentNode,
   selectors: readonly string[],
 ): string | null {
   for (const sel of selectors) {
@@ -36,7 +36,7 @@ export function firstText(
 }
 
 export function allTexts(
-  doc: Document,
+  doc: ParentNode,
   selectors: readonly string[],
 ): string[] {
   const out: string[] = [];
@@ -50,6 +50,14 @@ export function allTexts(
   return out;
 }
 
-export function hasAny(doc: Document, selectors: readonly string[]): boolean {
+export function hasAny(doc: ParentNode, selectors: readonly string[]): boolean {
   return selectors.some((sel) => doc.querySelector(sel) !== null);
+}
+
+/** Text of an element with <br> and block boundaries kept as line breaks. */
+export function textWithBreaks(el: Element): string {
+  const clone = el.cloneNode(true) as Element;
+  clone.querySelectorAll('br').forEach((br) => br.replaceWith('\n'));
+  clone.querySelectorAll('p, div, li').forEach((block) => block.append('\n'));
+  return clone.textContent ?? '';
 }

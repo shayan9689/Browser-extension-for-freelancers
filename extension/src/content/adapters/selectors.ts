@@ -41,6 +41,30 @@ export const fiverrSelectors = {
   ],
 } as const;
 
+/**
+ * Upwork's newer job viewer, used by the "Best matches" slider (drawer) and
+ * job pages. Always query inside the viewer: the feed behind the slider has
+ * its own [data-test="job-title"] tiles.
+ */
+export const upworkViewerSelectors = {
+  /** Open slider first, then a full-page viewer */
+  root: [
+    '[data-test="drawer"] [data-test="job-details-viewer"]',
+    '[data-test="job-details-viewer"]',
+  ],
+  title: ['[data-test="job-header"] [data-test="job-title"]', 'header h3'],
+  /** Description text (the container also holds the "More" toggle) */
+  description: [
+    '[data-test="job-description-content"] .job-description-content',
+    '[data-test="job-description-content"] .fluid-line-clamp-content',
+    '[data-test="job-description-content"]',
+  ],
+  /** Metric tiles (workload, duration, experience, budget…) */
+  metrics: '[data-test^="job-metrics-"]:not([data-test="job-metrics-grid"])',
+  experience: ['[data-test="job-metrics-experience"] span'],
+  skills: ['[data-test="skill"] [data-test="tag"]', '[data-test="skill"]'],
+} as const;
+
 export const upworkSelectors = {
   title: [
     /** 2026 job details card: <h4><span class="flex-1">Title</span><button/></h4> */
@@ -85,6 +109,7 @@ export const upworkSelectors = {
     '[data-testid="experience-level"]',
   ],
   jobPageMarker: [
+    '[data-test="job-details-viewer"]',
     '[data-test="Description"]',
     '[data-testid="job-description"]',
     '[data-test="JobTitle"]',

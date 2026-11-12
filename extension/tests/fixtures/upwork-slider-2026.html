@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<!-- Structure mirrors Upwork's "Best matches" feed with a job open in the slider (Nov 2026). All content is made up. -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Upwork</title>
+  </head>
+  <body>
+    <section data-test="jobs-feed">
+      <article data-test="job-tile">
+        <h3 data-test="job-title" class="heading-small mb-0">Feed job that must not be picked</h3>
+        <span data-test="skill"><div data-test="tag">WordPress</div></span>
+      </article>
+      <article data-test="job-tile">
+        <h3 data-test="job-title" class="heading-small mb-0">Another feed job</h3>
+      </article>
+    </section>
+    <div data-test="drawer">
+      <div class="job-details-page" data-test="job-details-page">
+        <div class="job-details-viewer" data-test="job-details-viewer">
+          <main class="job-details-viewer-content">
+            <header data-test="job-header">
+              <div class="job-header-title-row">
+                <h3 class="job-header-title m-0" data-test="job-title">Telegram bot and API integration for a booking app</h3>
+                <div data-test="save-job-title"><button type="button" aria-label="Save job"></button></div>
+              </div>
+              <div data-test="job-meta"><span data-test="posted-time">Posted 1 hour ago</span></div>
+            </header>
+            <div data-test="job-description-card">
+              <h3 data-test="job-description-header">Summary</h3>
+              <div data-test="job-description-content" class="fluid-line-clamp job-description-line-clamp">
+                <div id="fluid-line-clamp-1" class="fluid-line-clamp-content is-clamped" tabindex="-1">
+                  <div class="job-description-content body-medium">Hello,<br><br>We need a Telegram bot that books appointments through our REST API.<br>- Node.js preferred<br>- Must handle payments</div>
+                </div>
+                <button type="button" aria-expanded="false" data-test="line-clamp-toggle"><span>More</span></button>
+              </div>
+            </div>
+            <section data-test="job-metrics">
+              <div class="job-metrics-grid" data-test="job-metrics-grid">
+                <div class="job-metrics-tile" data-test="job-metrics-workload"><div data-test="icon"></div><div class="job-metrics-tile-content"><span>Less than 30 hrs/week</span><span>Hourly</span></div></div>
+                <div class="job-metrics-tile" data-test="job-metrics-budget"><div data-test="icon"></div><div class="job-metrics-tile-content"><span>$25.00 - $45.00</span><span>Hourly</span></div></div>
+                <div class="job-metrics-tile" data-test="job-metrics-experience"><div data-test="icon"></div><div class="job-metrics-tile-content"><span>Expert</span><span>Experience level</span></div></div>
+              </div>
+            </section>
+            <section data-test="expertise-section">
+              <h3 data-test="expertise-heading">Skills and experience</h3>
+              <div data-test="expertise-group-mandatory">
+                <p>Mandatory skills</p>
+                <div>
+                  <span data-test="skill"><a href="#"><div data-test="tag">Bot Development</div></a></span>
+                  <span data-test="skill"><a href="#"><div data-test="tag">Node.js</div></a></span>
+                  <span data-test="skill"><span><div data-test="tag">API Integration</div></span></span>
+                </div>
+              </div>
+            </section>
+          </main>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
