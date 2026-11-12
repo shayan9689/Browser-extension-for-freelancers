@@ -50,6 +50,44 @@ describe('upwork fixture', () => {
   });
 });
 
+describe('upwork 2026 layout', () => {
+  it('extracts title, all description paragraphs, rate, level and skills', () => {
+    const doc = loadDocument('upwork-job-2026.html');
+    const result = extractJobPost(doc, 'https://www.upwork.com/jobs/AI-chatbot_~0123');
+    expect('title' in result).toBe(true);
+    if (!('title' in result)) return;
+    expect(result.platform).toBe('upwork');
+    expect(result.title).toBe('AI chatbot developer for a task app');
+    expect(result.description).toContain('manage daily tasks');
+    expect(result.description).toContain('suggests actions');
+    expect(result.description).not.toMatch(/^Summary/);
+    expect(result.budgetText).toBe('$19.00 - $40.00 · Hourly');
+    expect(result.experienceLevel).toBe('Intermediate');
+    expect(result.skills).toEqual([
+      'Mobile App Development',
+      'Chatbot Development',
+      'OpenAI API',
+    ]);
+  });
+
+  it('reads a fixed-price budget', () => {
+    const doc = loadDocument('upwork-job-2026.html');
+    const li = doc.querySelector('[data-cy="clock-timelog"]')?.closest('li');
+    if (!li) throw new Error('fixture changed');
+    li.innerHTML =
+      '<div data-cy="fixed-price"></div><div><p><strong>$500.00</strong></p></div><div class="description">Fixed-price</div>';
+    const result = extractJobPost(doc, 'https://www.upwork.com/jobs/AI-chatbot_~0123');
+    expect('title' in result && result.budgetText).toBe('$500.00 · Fixed-price');
+  });
+
+  it('falls back to the page title when the heading is missing', () => {
+    const doc = loadDocument('upwork-job-2026.html');
+    doc.querySelector('.job-details-card h4')?.remove();
+    const result = extractJobPost(doc, 'https://www.upwork.com/jobs/AI-chatbot_~0123');
+    expect('title' in result && result.title).toBe('AI chatbot developer for a task app');
+  });
+});
+
 describe('non-job pages', () => {
   it('returns NOT_A_JOB_PAGE for fiverr home', () => {
     const doc = loadDocument('fiverr-home.html');

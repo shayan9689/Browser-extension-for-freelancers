@@ -43,6 +43,10 @@ export const fiverrSelectors = {
 
 export const upworkSelectors = {
   title: [
+    /** 2026 job details card: <h4><span class="flex-1">Title</span><button/></h4> */
+    '.job-details-card h4 span.flex-1',
+    '.job-details-content h4 span',
+    '.job-details-content h4',
     'h1[data-test="job-title"]',
     'h1[data-testid="job-title"]',
     '[data-test="JobTitle"]',
@@ -51,6 +55,8 @@ export const upworkSelectors = {
     'h1',
   ],
   description: [
+    /** Paragraphs only: the container also holds a "Summary" label */
+    '[data-test="Description"] p',
     '[data-test="Description"]',
     '[data-testid="job-description"]',
     '[data-test="JobDescription"]',
@@ -63,12 +69,18 @@ export const upworkSelectors = {
     '[data-test="budget"]',
     '[aria-label="Budget"]',
   ],
+  /** Job facts list (hours, duration, level, rate); the budget item contains "$" */
+  features: ['ul.features > li'],
   skills: [
+    /** "Skills and Expertise" badges */
+    '.skills-list .air3-badge',
+    '.skills-list a',
     '[data-test="Skill"]',
     '[data-testid="skill-chip"]',
     '[data-test="TokenClone"]',
   ],
   experience: [
+    'ul.features li:has([data-cy="expertise"]) strong',
     '[data-test="ExperienceLevel"]',
     '[data-testid="experience-level"]',
   ],

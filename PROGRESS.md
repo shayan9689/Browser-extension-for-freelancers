@@ -30,6 +30,7 @@ The 2026-10-30 re-audit fixed production-blocking issues; see CHANGELOG.
 | `sidePanel` | Keep UI open while reading the job post |
 | `activeTab` | Read the current tab URL/title and selected text on demand |
 | `scripting` | Inject/query selection fallback when adapters fail |
+| `contextMenus` | Right-click "Draft proposal with ProposalPilot" on selected text (works on any site) |
 
 Content script matches (from `src/shared/sites.ts`): `https://www.fiverr.com/*`, `https://www.upwork.com/*`
 

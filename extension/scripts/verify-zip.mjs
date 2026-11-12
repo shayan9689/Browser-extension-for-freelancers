@@ -59,7 +59,7 @@ if (!existsSync(manifestPath)) {
 }
 
 // Keep in sync with docs/permissions.md; new permissions need a store justification.
-const ALLOWED_PERMISSIONS = new Set(['storage', 'sidePanel', 'activeTab', 'scripting']);
+const ALLOWED_PERMISSIONS = new Set(['storage', 'sidePanel', 'activeTab', 'scripting', 'contextMenus']);
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
 const unexpected = [
   ...(manifest.permissions ?? []).filter((p) => !ALLOWED_PERMISSIONS.has(p)),

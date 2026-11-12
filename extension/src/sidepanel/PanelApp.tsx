@@ -1,41 +1,85 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ApiError, generateProposal } from '../shared/api';
+import { getSelectedTextFromActiveTab, sendToActiveTab } from '../shared/messages';
 import {
-  ApiError,
-  generateProposal,
-  type Length,
-  type Tone,
-} from '../shared/api';
-import {
-  getSelectedTextFromActiveTab,
-  sendToActiveTab,
-} from '../shared/messages';
-import { normalizeDescription } from '../content/adapters/normalize';
+  PENDING_SELECTION_KEY,
+  isFreshPending,
+  isPendingSelection,
+} from '../shared/pending';
 import {
   addHistoryItem,
   loadStore,
   profileIsEmpty,
   type Profile,
 } from '../shared/storage';
-import { usePanelStore } from './store';
+import { jobFromText } from './jobFromText';
+import { usePanelStore, type PanelState } from './store';
+import {
+  DetectingView,
+  ErrorView,
+  Footer,
+  GeneratingView,
+  GuideView,
+  Header,
+  IdleView,
+  JobReadyView,
+  ProfileBanner,
+  ResultView,
+  Stepper,
+  type StepIndex,
+} from './views';
 
 const ERROR_TITLES: Record<string, string> = {
   NETWORK: "Can't reach the server",
   RATE_LIMITED: 'Please wait a moment',
-  PAGE_ACCESS: "Can't read this page",
-  NO_CONTENT_SCRIPT: "Can't read this page",
-  EMPTY_SELECTION: 'Nothing selected',
-  NOT_A_JOB_PAGE: 'Not a job post',
-  EXTRACTION_FAILED: "Couldn't find the job details",
   UPSTREAM: "Couldn't generate a draft",
   INVALID_RESPONSE: "Couldn't generate a draft",
+  SERVER: 'Server error',
+  // Guidance (not failures): the page can't be read automatically.
+  NO_CONTENT_SCRIPT: 'Use your selection on this site',
+  PAGE_ACCESS: 'Use your selection on this site',
+  EMPTY_SELECTION: 'Nothing selected',
+  NOT_A_JOB_PAGE: 'No job post on this page',
+  EXTRACTION_FAILED: "Couldn't find the job details",
 };
+
+/** Codes that mean "read the job another way", shown as friendly guidance. */
+const GUIDE_CODES = new Set([
+  'NO_CONTENT_SCRIPT',
+  'PAGE_ACCESS',
+  'EMPTY_SELECTION',
+  'NOT_A_JOB_PAGE',
+  'EXTRACTION_FAILED',
+]);
+
+const RIGHT_CLICK_HINT =
+  'Highlight the job text, right-click it and choose "Draft proposal with ProposalPilot", or paste the text below.';
 
 function errorTitle(code: string): string {
   return ERROR_TITLES[code] ?? 'Something went wrong';
 }
 
-function wordCount(text: string): number {
-  return text.trim() ? text.trim().split(/\s+/).length : 0;
+function activeStep(state: PanelState): StepIndex {
+  switch (state.status) {
+    case 'ready':
+    case 'generating':
+      return 1;
+    case 'result':
+      return 2;
+    case 'error':
+      return state.job ? 1 : 0;
+    default:
+      return 0;
+  }
+}
+
+async function activeTabUrl(): Promise<string> {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return tab?.url ?? '';
+  } catch {
+    return '';
+  }
 }
 
 export default function PanelApp() {
@@ -43,20 +87,86 @@ export default function PanelApp() {
     usePanelStore();
   const abortRef = useRef<AbortController | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copiedQuestion, setCopiedQuestion] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [installId, setInstallId] = useState<string>('');
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
+
+  const openSettings = useCallback(() => {
+    void chrome.runtime.openOptionsPage();
+  }, []);
 
   useEffect(() => {
     void loadStore().then((data) => {
       setInstallId(data.installId);
       setProfile(data.profile);
+      setProfileLoaded(true);
       if (data.profile) {
         setTone(data.profile.defaultTone);
         setLength(data.profile.defaultLength);
       }
     });
   }, [setLength, setTone]);
+
+  // Profile edits in the options page show up without reopening the panel.
+  useEffect(() => {
+    const onChanged = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      area: string,
+    ) => {
+      if (area === 'local' && 'profile' in changes) {
+        setProfile((changes.profile.newValue as Profile | null | undefined) ?? null);
+      }
+    };
+    chrome.storage.onChanged.addListener(onChanged);
+    return () => chrome.storage.onChanged.removeListener(onChanged);
+  }, []);
+
+  const applyText = useCallback(
+    (text: string, url: string) => {
+      const job = jobFromText(text, url);
+      if (!job) {
+        setState({
+          status: 'error',
+          error: {
+            code: 'EMPTY_SELECTION',
+            message: `No text received. ${RIGHT_CLICK_HINT}`,
+          },
+        });
+        return;
+      }
+      // Clear the ref first so the aborted request doesn't restore its old job.
+      const running = abortRef.current;
+      abortRef.current = null;
+      running?.abort();
+      setState({ status: 'ready', job, editedDescription: job.description });
+    },
+    [setState],
+  );
+
+  // Right-click "Draft proposal with ProposalPilot" hands the selection over
+  // through chrome.storage.session (see src/shared/pending.ts).
+  useEffect(() => {
+    const apply = (value: unknown) => {
+      if (!isPendingSelection(value) || !isFreshPending(value)) return;
+      void chrome.storage.session.remove(PENDING_SELECTION_KEY);
+      applyText(value.text, value.url);
+    };
+    void chrome.storage.session
+      .get(PENDING_SELECTION_KEY)
+      .then((data) => apply(data[PENDING_SELECTION_KEY]))
+      .catch(() => undefined);
+    const onChanged = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      area: string,
+    ) => {
+      const change = changes[PENDING_SELECTION_KEY];
+      if (area === 'session' && change?.newValue) apply(change.newValue);
+    };
+    chrome.storage.onChanged.addListener(onChanged);
+    return () => chrome.storage.onChanged.removeListener(onChanged);
+  }, [applyText]);
 
   useEffect(() => {
     if (state.status !== 'error' || state.error.code !== 'RATE_LIMITED') {
@@ -67,7 +177,7 @@ export default function PanelApp() {
     setCountdown(left);
     const timer = setInterval(() => {
       left -= 1;
-      setCountdown(left);
+      setCountdown(Math.max(left, 0));
       if (left <= 0) clearInterval(timer);
     }, 1000);
     return () => clearInterval(timer);
@@ -99,19 +209,16 @@ export default function PanelApp() {
         }
 
         if (response.type === 'CONTENT_ERROR' && preferSelection) {
-          // No content script on this tab: read the selection via activeTab,
-          // which Chrome only grants after the toolbar icon is clicked on this tab.
-          let selected: string;
+          // No content script: activeTab works only after a right-click menu
+          // click on this tab (Chrome doesn't grant it when the toolbar icon
+          // opens the side panel), so failure here is expected; guide the user.
+          let selected = '';
           try {
             selected = await getSelectedTextFromActiveTab();
           } catch {
             setState({
               status: 'error',
-              error: {
-                code: 'PAGE_ACCESS',
-                message:
-                  'Chrome blocked access to this tab. Click the ProposalPilot icon in the toolbar while on the job page, then try again.',
-              },
+              error: { code: 'PAGE_ACCESS', message: RIGHT_CLICK_HINT },
             });
             return;
           }
@@ -120,28 +227,12 @@ export default function PanelApp() {
               status: 'error',
               error: {
                 code: 'EMPTY_SELECTION',
-                message: 'Highlight the job text on the page, then try again.',
+                message: `Highlight the job text first. ${RIGHT_CLICK_HINT}`,
               },
             });
             return;
           }
-          const { description, truncated } = normalizeDescription(selected);
-          const title =
-            description.slice(0, 80).split(/[.!?\n]/)[0]?.trim() || 'Selected text';
-          const [tab] = await chrome.tabs.query({
-            active: true,
-            currentWindow: true,
-          });
-          const job = {
-            platform: 'generic' as const,
-            url: tab?.url ?? '',
-            title,
-            description,
-            skills: [] as string[],
-            extractedAt: new Date().toISOString(),
-            truncated,
-          };
-          setState({ status: 'ready', job, editedDescription: description });
+          applyText(selected, await activeTabUrl());
           return;
         }
 
@@ -152,7 +243,7 @@ export default function PanelApp() {
               code: response.code,
               message:
                 response.code === 'NO_CONTENT_SCRIPT'
-                  ? 'ProposalPilot cannot read this tab yet. Reload the page, or highlight the job text and click Use selected text.'
+                  ? `Jobs are detected automatically on Fiverr and Upwork. ${RIGHT_CLICK_HINT} If this is Fiverr or Upwork, reload the tab.`
                   : response.message,
             },
           });
@@ -168,12 +259,12 @@ export default function PanelApp() {
           status: 'error',
           error: {
             code: 'PAGE_ACCESS',
-            message: 'Could not read the page. Reload it, then try again.',
+            message: `Could not read the page. ${RIGHT_CLICK_HINT}`,
           },
         });
       }
     },
-    [setState],
+    [setState, applyText],
   );
 
   const runGenerate = useCallback(async () => {
@@ -220,6 +311,7 @@ export default function PanelApp() {
         profile?.signOff && !result.proposal.includes(profile.signOff)
           ? `${result.proposal}\n\n${profile.signOff}`
           : result.proposal;
+      setCopied(false);
       setState({
         status: 'result',
         job,
@@ -240,7 +332,10 @@ export default function PanelApp() {
       });
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
-        setState({ status: 'ready', job, editedDescription });
+        // Cancelled by the user, or superseded by a new job hand-off.
+        if (abortRef.current === controller) {
+          setState({ status: 'ready', job, editedDescription });
+        }
         return;
       }
       if (err instanceof ApiError) {
@@ -269,59 +364,62 @@ export default function PanelApp() {
     abortRef.current?.abort();
   };
 
+  const backToIdle = () => {
+    const running = abortRef.current;
+    abortRef.current = null;
+    running?.abort();
+    setState({ status: 'idle' });
+  };
+
+  const copyText = async (text: string): Promise<boolean> => {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const pasteText = (text: string) => {
+    void activeTabUrl().then((url) => applyText(text, url));
+  };
+
   const liveRegion = useMemo(() => {
     switch (state.status) {
       case 'detecting':
         return 'Detecting job post';
+      case 'ready':
+        return 'Job post ready';
       case 'generating':
         return 'Generating proposal';
       case 'result':
         return 'Proposal ready';
       case 'error':
-        return `Error: ${state.error.message}`;
+        return `${errorTitle(state.error.code)}: ${state.error.message}`;
       default:
         return '';
     }
   }, [state]);
 
   return (
-    <main className="flex flex-col gap-4 p-4 text-sm">
+    <main className="flex min-h-screen flex-col gap-4 p-4 text-sm">
       <div aria-live="polite" className="sr-only">
         {liveRegion}
       </div>
 
-      <header>
-        <h1 className="text-lg font-semibold tracking-tight">ProposalPilot</h1>
-        <p className="opacity-80">Draft proposals from the job you are viewing</p>
-        {profileIsEmpty(profile) ? (
-          <p className="mt-2 rounded border border-amber-500/40 bg-amber-500/10 p-2 text-xs">
-            Profile is empty — proposals may be generic.{' '}
-            <button
-              type="button"
-              className="underline"
-              onClick={() => void chrome.runtime.openOptionsPage()}
-            >
-              Complete your profile
-            </button>
-          </p>
-        ) : null}
-        <button
-          type="button"
-          className="mt-2 text-xs underline opacity-70"
-          onClick={() => void chrome.runtime.openOptionsPage()}
-        >
-          Settings & history
-        </button>
-      </header>
+      <Header onSettings={openSettings} />
+      <Stepper active={activeStep(state)} />
+
+      {profileLoaded && profileIsEmpty(profile) ? (
+        <ProfileBanner onOpen={openSettings} />
+      ) : null}
 
       {import.meta.env.DEV ? (
-        <label className="flex items-center gap-2 text-xs opacity-70">
+        <label className="pp-faint flex items-center gap-2 text-xs">
           Dev state
           <select
-            className="rounded border border-slate-500/40 bg-transparent px-1 py-0.5"
-            onChange={(e) =>
-              forceStatus(e.target.value as typeof state.status)
-            }
+            className="pp-select !min-h-7 !w-auto !py-0 text-xs"
+            onChange={(e) => forceStatus(e.target.value as PanelState['status'])}
             defaultValue=""
           >
             <option value="" disabled>
@@ -338,290 +436,112 @@ export default function PanelApp() {
         </label>
       ) : null}
 
-      {state.status === 'idle' ? (
-        <section className="rounded-lg border border-slate-500/40 p-3">
-          <p>Open a job post on a supported marketplace, then detect it.</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="rounded-md bg-teal-600 px-3 py-2 font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
-              onClick={() => void detectJob(false)}
-            >
-              Detect job post
-            </button>
-            <button
-              type="button"
-              className="rounded-md border border-slate-500/50 px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
-              onClick={() => void detectJob(true)}
-            >
-              Use selected text
-            </button>
-          </div>
-        </section>
-      ) : null}
+      <div key={state.status} className="pp-enter flex flex-col">
+        {state.status === 'idle' ? (
+          <IdleView
+            onDetect={() => void detectJob(false)}
+            onUseSelection={() => void detectJob(true)}
+            onPaste={pasteText}
+          />
+        ) : null}
 
-      {state.status === 'detecting' ? (
-        <div className="animate-pulse space-y-2" aria-busy="true">
-          <div className="h-4 rounded bg-slate-500/30" />
-          <div className="h-4 w-2/3 rounded bg-slate-500/30" />
-          <div className="h-20 rounded bg-slate-500/20" />
-        </div>
-      ) : null}
+        {state.status === 'detecting' ? <DetectingView /> : null}
 
-      {state.status === 'ready' || state.status === 'generating' ? (
-        <JobReady
-          title={state.job.title}
-          platform={state.job.platform}
-          budget={state.job.budgetText}
-          skills={state.job.skills}
-          description={state.editedDescription}
-          generating={state.status === 'generating'}
-          onDescriptionChange={(value) =>
-            setState({
-              status: 'ready',
-              job: state.job,
-              editedDescription: value,
-            })
-          }
-          onGenerate={() => void runGenerate()}
-          onCancel={cancelGenerate}
-        />
-      ) : null}
+        {state.status === 'ready' ? (
+          <JobReadyView
+            job={state.job}
+            description={state.editedDescription}
+            onDescriptionChange={(value) =>
+              setState({ status: 'ready', job: state.job, editedDescription: value })
+            }
+            onGenerate={() => void runGenerate()}
+            onBack={backToIdle}
+          />
+        ) : null}
 
-      {state.status === 'result' ? (
-        <ResultView
-          draft={state.draft}
-          result={state.result}
-          tone={tone}
-          length={length}
-          copied={copied}
-          onDraftChange={(draft) => setState({ ...state, draft })}
-          onTone={setTone}
-          onLength={setLength}
-          onCopy={async () => {
-            await navigator.clipboard.writeText(state.draft);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1500);
-          }}
-          onRegenerate={() => void runGenerate()}
-        />
-      ) : null}
+        {state.status === 'generating' ? (
+          <GeneratingView job={state.job} onCancel={cancelGenerate} />
+        ) : null}
 
-      {state.status === 'error' ? (
-        <div
-          role="alert"
-          className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-3"
-        >
-          <p className="font-medium">{errorTitle(state.error.code)}</p>
-          <p className="mt-1">
-            {state.error.code === 'RATE_LIMITED' && countdown !== null
-              ? `Rate limited. Try again in ${countdown}s.`
-              : state.error.message}
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="rounded-md bg-teal-600 px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
-              onClick={() => {
-                if (state.job) {
-                  setState({
-                    status: 'ready',
-                    job: state.job,
-                    editedDescription:
-                      state.editedDescription ?? state.job.description,
-                  });
-                  void runGenerate();
-                } else {
-                  void detectJob(false);
-                }
-              }}
-            >
-              Retry
-            </button>
-            <button
-              type="button"
-              className="rounded-md border border-slate-500/50 px-3 py-2"
-              onClick={() => void detectJob(true)}
-            >
-              Use selected text
-            </button>
-          </div>
-        </div>
-      ) : null}
-    </main>
-  );
-}
+        {state.status === 'result' ? (
+          <ResultView
+            draft={state.draft}
+            result={state.result}
+            tone={tone}
+            length={length}
+            copied={copied}
+            copiedQuestion={copiedQuestion}
+            onDraftChange={(draft) => {
+              setCopied(false);
+              setState({ ...state, draft });
+            }}
+            onTone={setTone}
+            onLength={setLength}
+            onCopy={async () => {
+              if (await copyText(state.draft)) {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1800);
+              }
+            }}
+            onCopyQuestion={async (q) => {
+              if (await copyText(q)) {
+                setCopiedQuestion(q);
+                setTimeout(() => setCopiedQuestion(null), 1500);
+              }
+            }}
+            onRegenerate={() => void runGenerate()}
+            onNewJob={backToIdle}
+          />
+        ) : null}
 
-function JobReady(props: {
-  title: string;
-  platform: string;
-  budget?: string;
-  skills: string[];
-  description: string;
-  generating: boolean;
-  onDescriptionChange: (v: string) => void;
-  onGenerate: () => void;
-  onCancel: () => void;
-}) {
-  const [editOpen, setEditOpen] = useState(false);
-  return (
-    <section className="flex flex-col gap-3 rounded-lg border border-slate-500/40 p-3">
-      <p className="text-xs uppercase opacity-60">{props.platform}</p>
-      <h2 className="text-base font-semibold">{props.title}</h2>
-      {props.budget ? <p className="text-xs">Budget: {props.budget}</p> : null}
-      <ul className="flex flex-wrap gap-1">
-        {props.skills.map((s) => (
-          <li key={s} className="rounded-full bg-teal-600/20 px-2 py-0.5 text-xs">
-            {s}
-          </li>
-        ))}
-      </ul>
-      <details open={editOpen} onToggle={(e) => setEditOpen(e.currentTarget.open)}>
-        <summary className="cursor-pointer text-xs opacity-80">
-          Edit extracted text
-        </summary>
-        <textarea
-          className="mt-2 min-h-28 w-full rounded border border-slate-500/40 bg-transparent p-2 text-xs"
-          value={props.description}
-          onChange={(e) => props.onDescriptionChange(e.target.value)}
-          disabled={props.generating}
-        />
-      </details>
-      {props.generating ? (
-        <div className="flex items-center gap-2">
-          <p aria-busy="true">Generating…</p>
-          <button
-            type="button"
-            className="rounded-md border border-slate-500/50 px-3 py-1.5"
-            onClick={props.onCancel}
-          >
-            Cancel
-          </button>
-        </div>
-      ) : (
-        <button
-          type="button"
-          className="rounded-md bg-teal-600 px-3 py-2 font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
-          onClick={props.onGenerate}
-        >
-          Generate proposal
-        </button>
-      )}
-    </section>
-  );
-}
+        {state.status === 'error' && GUIDE_CODES.has(state.error.code) ? (
+          <GuideView
+            title={errorTitle(state.error.code)}
+            message={state.error.message}
+            onRetry={() => void detectJob(false)}
+            onPaste={pasteText}
+          />
+        ) : null}
 
-function ResultView(props: {
-  draft: string;
-  result: {
-    suggested_price: { amount: number; currency: string; rationale: string };
-    delivery_days: number;
-    questions_to_ask: string[];
-    warnings: string[];
-  };
-  tone: Tone;
-  length: Length;
-  copied: boolean;
-  onDraftChange: (v: string) => void;
-  onTone: (t: Tone) => void;
-  onLength: (l: Length) => void;
-  onCopy: () => void;
-  onRegenerate: () => void;
-}) {
-  return (
-    <section className="flex flex-col gap-3">
-      <textarea
-        className="min-h-40 w-full rounded-lg border border-slate-500/40 bg-transparent p-3 text-sm"
-        value={props.draft}
-        onChange={(e) => props.onDraftChange(e.target.value)}
-        aria-label="Proposal draft"
-      />
-      <p className="text-xs opacity-70">{wordCount(props.draft)} words</p>
-
-      <div className="flex flex-wrap gap-2 text-xs">
-        <span
-          className="rounded-full bg-teal-600/20 px-2 py-1"
-          title={props.result.suggested_price.rationale}
-        >
-          {props.result.suggested_price.currency}{' '}
-          {props.result.suggested_price.amount}
-          <span className="ml-1 opacity-60">why?</span>
-        </span>
-        <span className="rounded-full bg-slate-500/20 px-2 py-1">
-          {props.result.delivery_days} days
-        </span>
-      </div>
-
-      {props.result.warnings.length > 0 ? (
-        <ul className="rounded border border-amber-500/40 p-2 text-xs text-amber-700 dark:text-amber-300">
-          {props.result.warnings.map((w) => (
-            <li key={w}>{w}</li>
-          ))}
-        </ul>
-      ) : null}
-
-      {props.result.questions_to_ask.length > 0 ? (
-        <div>
-          <p className="mb-1 text-xs uppercase opacity-60">Questions to ask</p>
-          <ul className="space-y-1 text-xs">
-            {props.result.questions_to_ask.map((q) => (
-              <li key={q} className="flex items-start justify-between gap-2">
-                <span>{q}</span>
+        {state.status === 'error' && !GUIDE_CODES.has(state.error.code) ? (
+          <ErrorView
+            title={errorTitle(state.error.code)}
+            message={
+              state.error.code === 'RATE_LIMITED' && countdown !== null && countdown > 0
+                ? `Too many requests. Try again in ${countdown}s.`
+                : state.error.message
+            }
+            retryDisabled={
+              state.error.code === 'RATE_LIMITED' && countdown !== null && countdown > 0
+            }
+            onRetry={() => {
+              if (state.job) {
+                setState({
+                  status: 'ready',
+                  job: state.job,
+                  editedDescription: state.editedDescription ?? state.job.description,
+                });
+                void runGenerate();
+              } else {
+                void detectJob(false);
+              }
+            }}
+            extra={
+              state.job ? null : (
                 <button
                   type="button"
-                  className="shrink-0 underline"
-                  onClick={() => void navigator.clipboard.writeText(q)}
+                  className="pp-btn pp-btn-ghost pp-btn-sm"
+                  onClick={backToIdle}
                 >
-                  Copy
+                  Start over
                 </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      <div className="flex flex-wrap gap-2">
-        <label className="text-xs">
-          Tone
-          <select
-            className="ml-1 rounded border border-slate-500/40 bg-transparent px-1"
-            value={props.tone}
-            onChange={(e) => props.onTone(e.target.value as Tone)}
-          >
-            <option value="friendly">friendly</option>
-            <option value="professional">professional</option>
-            <option value="concise">concise</option>
-          </select>
-        </label>
-        <label className="text-xs">
-          Length
-          <select
-            className="ml-1 rounded border border-slate-500/40 bg-transparent px-1"
-            value={props.length}
-            onChange={(e) => props.onLength(e.target.value as Length)}
-          >
-            <option value="short">short</option>
-            <option value="medium">medium</option>
-          </select>
-        </label>
+              )
+            }
+          />
+        ) : null}
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          className="rounded-md bg-teal-600 px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
-          onClick={props.onCopy}
-        >
-          {props.copied ? 'Copied' : 'Copy'}
-        </button>
-        <button
-          type="button"
-          className="rounded-md border border-slate-500/50 px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
-          onClick={props.onRegenerate}
-        >
-          Regenerate
-        </button>
-      </div>
-    </section>
+      <Footer />
+    </main>
   );
 }

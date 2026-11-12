@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.2] - 2026-11-12
+
+### Added
+
+- Right-click "Draft proposal with ProposalPilot" on selected text opens the side panel with the
+  job ready, on any website (new `contextMenus` permission)
+- "Paste job text" box in the side panel as a fallback that needs no page access
+- Redesigned side panel and settings: new theme with light/dark support, brand gradients,
+  progress stepper, animated generating state, price and delivery tiles, segmented tone/length
+  controls, profile completeness meter, Enter-to-add skills and confirm before deleting data
+
+### Fixed
+
+- "Use selected text" on sites other than Fiverr/Upwork failed with "Chrome blocked access",
+  because Chrome does not grant activeTab when the toolbar icon opens the side panel. The panel
+  now guides users to the right-click menu or paste box instead of showing an error
+- Draft text box grows with the proposal instead of cutting it off
+- Upwork job detection failed on the current Upwork layout ("Couldn't find the job details").
+  Selectors are now based on a real job page: title, all description paragraphs, hourly or
+  fixed budget, experience level and skills; the page title is a fallback for the job title
+
 ## [1.0.1] - 2026-11-12
 
 ### Added

@@ -24,3 +24,6 @@ web-ext.config.ts
 *.njsproj
 *.sln
 *.sw?
+
+# Real pages saved for selector work; may contain personal data. Never commit.
+tests/fixtures/*-real.html
