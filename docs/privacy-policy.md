@@ -1,6 +1,6 @@
 # Privacy Policy — ProposalPilot
 
-**Last updated:** 2026-10-30
+**Last updated:** 2026-11-12
 
 ProposalPilot helps freelancers draft proposals from the job post they are viewing.
 
@@ -24,7 +24,7 @@ The ProposalPilot server also sees your IP address, as any web server does. It i
 
 ## Third parties
 
-The ProposalPilot server sends the job text and your profile text to OpenAI to generate the draft, and for no other purpose. OpenAI processes it under its API data policy (https://openai.com/policies/api-data-usage-policies).
+The ProposalPilot server sends the job text and your profile text to Groq, our AI model provider, to generate the draft, and for no other purpose. Groq processes it under its API data policy (https://console.groq.com/docs/your-data) and privacy policy (https://groq.com/privacy-policy).
 
 ## Data retention
 

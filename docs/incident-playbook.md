@@ -19,8 +19,9 @@
 2. History, profile, and copy still work offline for past drafts.
 3. Optionally set `LLM_PROVIDER=fake` temporarily (not for real users).
 
-## Cost spike
+## Free quota exhausted / traffic spike
 
 1. Lower `DAILY_REQUEST_CAP` / `RATE_LIMIT_PER_HOUR`.
-2. Confirm provider spend cap.
+2. Check quota usage in the provider console.
 3. Ensure CORS allows only your extension ID.
+4. See `docs/runbook.md` for switching to another free provider.

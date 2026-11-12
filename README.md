@@ -19,6 +19,7 @@ A Chrome extension that reads the freelance job post you are viewing and drafts 
 - **Job extraction** with per-site adapters and a "use selected text" fallback for any page
 - **Profile-grounded drafts:** the AI only uses facts from the profile you save
 - **Local-first:** profile and the last 50 proposals stay in `chrome.storage.local`, with export and delete
+- **Free to run:** works on the Groq or Gemini free tier and Render's free plan
 - **Hardened backend:** FastAPI holds the LLM key, with prompt-injection defence, per-user and per-IP rate limits, a global daily cost cap and optional Redis
 - **Minimal permissions:** `storage`, `sidePanel`, `activeTab`, `scripting`, no broad host access
 
@@ -29,7 +30,7 @@ flowchart LR
   Page[Job post] --> CS[Content script<br/>read-only]
   CS --> Panel[Side panel]
   Panel -->|job text + profile| API[FastAPI backend]
-  API --> LLM[OpenAI / Anthropic]
+  API --> LLM[Groq free tier<br/>or Gemini / OpenAI / Anthropic]
   LLM --> API --> Panel
   Panel --> You[You edit, copy and send]
 ```

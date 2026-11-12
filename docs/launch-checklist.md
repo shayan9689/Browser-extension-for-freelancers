@@ -11,8 +11,9 @@ Public URLs (GitHub Pages, serves `docs/`):
 ## A. Accounts and limits (15 min)
 
 - [x] Support inbox: supportextension9@gmail.com (in privacy policy and listing).
-- [ ] OpenAI dashboard → create a **project API key** for ProposalPilot.
-- [ ] OpenAI dashboard → Limits: set a monthly budget (e.g. $10) and an email alert at 50%.
+- [ ] Groq console (https://console.groq.com/keys) → create a free API key for ProposalPilot.
+      No card needed; do not add billing so it stays free.
+- [ ] Note the free-tier limits shown in the Groq console (Settings → Limits) for the model you use.
 - [ ] Generate an admin secret for `/v1/ping-llm`, e.g. `python -c "import secrets; print(secrets.token_urlsafe(32))"`.
 
 ## B. Deploy the backend on Render (Phase 9, ~20 min)
@@ -20,17 +21,17 @@ Public URLs (GitHub Pages, serves `docs/`):
 1. [ ] render.com → sign in with GitHub → **New → Web Service** → pick
        `shayan9689/Browser-extension-for-freelancers`.
 2. [ ] Settings: **Root Directory** `backend`, **Runtime** Docker, region nearest your users,
-       instance type Free (or Starter at ~$7/mo to avoid cold starts).
+       instance type **Free** (it sleeps when idle; step 8 keeps it awake for free).
 3. [ ] Environment variables:
 
        ENV=production
-       LLM_PROVIDER=openai
-       OPENAI_API_KEY=<your key>
+       LLM_PROVIDER=groq
+       GROQ_API_KEY=<your free key>
        ALLOWED_ORIGINS=chrome-extension://placeholder   (replaced in step C)
        RATE_LIMIT_PER_HOUR=20
        DAILY_REQUEST_CAP=200
        ADMIN_PING_SECRET=<secret from A>
-       LLM_MODEL=                                        (blank = gpt-4o-mini)
+       LLM_MODEL=                                        (blank = openai/gpt-oss-120b)
 
 4. [ ] Recommended: **New → Key Value** (free, same region) → copy its *internal* URL →
        add `REDIS_URL=<url>` to the web service.
@@ -40,6 +41,9 @@ Public URLs (GitHub Pages, serves `docs/`):
        - Open `https://<your-api>/health` on your phone with Wi-Fi off → `{"status":"ok",...}`
        - `curl -H "x-admin-secret: <secret>" https://<your-api>/v1/ping-llm` → `{"status":"ok"}`
 8. [ ] UptimeRobot (free) → New monitor → HTTP(s) → `https://<your-api>/health`, 5 min, email alert.
+       The 5-minute ping also stops the free Render service from sleeping, so users and the store
+       reviewer do not wait ~50 s for a cold start. One always-on free service fits in Render's
+       monthly free hours.
        Suspend the Render service once to confirm the alert email arrives, then resume.
 
 ## C. Production build and real-browser test (Phase 10, ~30 min)
@@ -90,4 +94,4 @@ See `docs/incident-playbook.md`.
       Tag pushes then upload a draft; set repo variable `CWS_AUTO_PUBLISH=true` to auto-submit.
 - [ ] README: add the store link, a demo GIF and screenshots; add repo topics
       (chrome-extension, ai, freelance, proposal-generator, llm, manifest-v3) and pin the repo.
-- [ ] Weekly: store reviews, installs/uninstalls, OpenAI spend per proposal, uptime alerts.
+- [ ] Weekly: store reviews, installs/uninstalls, free-tier quota usage in the Groq console, uptime alerts.

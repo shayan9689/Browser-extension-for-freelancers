@@ -28,7 +28,7 @@ How it works:
 5. Edit, copy, and paste it yourself into the marketplace. ProposalPilot never submits for you.
 
 Privacy:
-- Job text and your profile are sent to the ProposalPilot server and OpenAI only when you click Generate, and are not stored on the server.
+- Job text and your profile are sent to the ProposalPilot server and our AI provider (Groq) only when you click Generate, and are not stored on the server.
 - History and profile stay on your device.
 - No accounts. No auto-submit. No bulk scraping.
 

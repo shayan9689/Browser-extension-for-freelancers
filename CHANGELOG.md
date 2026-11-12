@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Free LLM providers: Groq and Google Gemini via their OpenAI-compatible APIs
+  (`LLM_PROVIDER=groq|gemini`, `GROQ_API_KEY`, `GEMINI_API_KEY`)
+
+### Changed
+
+- Privacy policy and store listing name Groq as the AI provider
+- Deploy docs, launch checklist and runbook use only free services
+
 ## [1.0.0] - 2026-10-30
 
 ### Added
