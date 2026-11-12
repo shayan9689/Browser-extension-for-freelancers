@@ -67,13 +67,16 @@ No marketplace account is needed.
 - Small promo tile (440x280): `extension/store-assets/promo-small-440x280.png`
 - Regenerate with `npm run icons` (source: `extension/assets/store/icon.svg`)
 
-## Screenshot checklist (1280x800, taken on the demo page)
+## Screenshots (1280x800, ready to upload)
 
-1. Idle / open a job post
-2. Job detected with skills
-3. Generating state
-4. Result with price + delivery chips
-5. Settings / profile page
+Files in `extension/store-assets/screenshots/`, in this order. Content is made up; no marketplace
+names or logos.
+
+1. `screenshot-1-detect.png`: job detected from the page
+2. `screenshot-2-draft.png`: generated draft with price and delivery
+3. `screenshot-3-anysite.png`: works on any site (selection, right-click, paste)
+4. `screenshot-4-chat.png`: inbox chat checked for a project
+5. `screenshot-5-profile.png`: profile settings
 
 ## Privacy policy URL
 
