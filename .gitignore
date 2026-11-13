@@ -34,3 +34,6 @@ Thumbs.db
 # Build artifacts
 *.zip
 *.log
+
+# Prompt eval outputs
+backend/eval-runs/

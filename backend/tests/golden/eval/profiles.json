@@ -1,0 +1,44 @@
+{
+  "fullstack": {
+    "name": "Alex Rivera",
+    "headline": "Full-stack developer (Python + React)",
+    "skills": ["Python", "FastAPI", "React", "JavaScript", "TypeScript", "PostgreSQL", "Stripe"],
+    "years_experience": 6,
+    "hourly_rate": 50,
+    "currency": "USD",
+    "highlights": [
+      "Moved a SaaS from one-off payments to Stripe subscriptions with webhooks",
+      "Built two MV3 Chrome extensions, one used by about 2,000 people"
+    ]
+  },
+  "designer": {
+    "name": "Sana Malik",
+    "headline": "Brand and web designer",
+    "skills": ["Figma", "Webflow", "Brand identity", "Logo design", "UI design"],
+    "years_experience": 4,
+    "hourly_rate": 35,
+    "currency": "USD",
+    "highlights": [
+      "Redesigned 12 small-business websites in Webflow",
+      "Created brand kits for cafes and fitness studios"
+    ]
+  },
+  "data": {
+    "name": "Omar Haddad",
+    "headline": "Python data and automation specialist",
+    "skills": ["Python", "pandas", "Web scraping", "Playwright", "Excel", "Google Sheets"],
+    "years_experience": 3,
+    "hourly_rate": 40,
+    "currency": "USD",
+    "highlights": ["Automated weekly sales reports that saved a team 6 hours a week"]
+  },
+  "beginner": {
+    "name": "Lina Chen",
+    "headline": "Junior mobile developer",
+    "skills": ["React Native", "JavaScript"],
+    "years_experience": 1,
+    "hourly_rate": 20,
+    "currency": "USD",
+    "highlights": []
+  }
+}
