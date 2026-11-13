@@ -54,8 +54,38 @@ def _looks_injected(text: str, system_prompt: str) -> bool:
     return snippet in lowered
 
 
+# Typographic characters some models emit, mapped to plain punctuation.
+_PUNCTUATION = str.maketrans({
+    "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-", "\u2014": " - ",
+    "\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201d": '"',
+    "\u00a0": " ", "\u202f": " ", "\u2009": " ", "\u200b": "", "\u2026": "...",
+    "\u2248": "about ",
+})
+
+
+def tidy_text(text: str) -> str:
+    """Plain punctuation, single spaces, paragraphs separated by one blank line."""
+    text = text.translate(_PUNCTUATION).replace("\r\n", "\n")
+    paragraphs = []
+    for block in re.split(r"\n\s*\n", text):
+        lines = [re.sub(r"[ \t]+", " ", line).strip() for line in block.split("\n")]
+        block = " ".join(line for line in lines if line)
+        block = re.sub(r"\s+([,.!?;:])", r"\1", block)
+        if block:
+            paragraphs.append(block)
+    if len(paragraphs) == 1:
+        # Keep a closing question on its own line even if the model sent one block.
+        match = re.match(r"(.+[.!])\s+([^.!?]+\?)$", paragraphs[0])
+        if match:
+            paragraphs = [match.group(1), match.group(2)]
+    return "\n\n".join(paragraphs)
+
+
 def _post_check(response: ProposalResponse, request: ProposalRequest) -> ProposalResponse:
-    warnings = list(response.warnings)
+    response.proposal = tidy_text(response.proposal)
+    response.questions_to_ask = [tidy_text(q) for q in response.questions_to_ask]
+    response.suggested_price.rationale = tidy_text(response.suggested_price.rationale)
+    warnings = [tidy_text(w) for w in response.warnings]
     text = response.proposal.lower()
     for phrase in BANNED_PHRASES:
         if phrase in text:
@@ -67,6 +97,15 @@ def _post_check(response: ProposalResponse, request: ProposalRequest) -> Proposa
         r"\d+\+?\s+years?", response.proposal, re.I
     ):
         warnings.append("Proposal may claim experience not in profile.")
+    highlights = " ".join(request.profile.highlights).lower()
+    timing = re.search(r"\b(recently|last (?:week|month|year)|this year)\b", text)
+    if timing and timing.group(1) not in highlights:
+        warnings.append(f'Draft says "{timing.group(1)}", which is not in your profile. Check it.')
+    budget = (request.job.budget_text or "").lower()
+    hourly_job = bool(re.search(r"hour|/hr|per hr", budget))
+    rate = request.profile.hourly_rate
+    if not hourly_job and rate and 0 < response.suggested_price.amount <= rate:
+        warnings.append("Suggested price looks like an hourly rate, not a project total.")
     response.warnings = warnings
     return response
 

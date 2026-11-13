@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- Proposal prompt v2 (`2026-11-13.6`): four short paragraphs (insight, proof, approach,
+  question), honest about skills missing from the profile, no invented scope or numbers,
+  no price in the draft text
+- Backend cleans punctuation (plain hyphens, quotes, spaces) and warns when a draft mentions
+  timing not in the profile or the price looks like an hourly rate
+
+### Added
+
+- `scripts/eval_prompts.py` with a golden set of 12 jobs and 6 chats for scoring prompts
+
 ## [1.0.3] - 2026-11-13
 
 ### Added
