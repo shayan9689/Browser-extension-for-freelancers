@@ -9,6 +9,7 @@ import {
 } from './normalize';
 import { upworkSelectors, upworkViewerSelectors } from './selectors';
 import type { Adapter } from './types';
+import { extractApply, isApplyPage } from './upworkApply';
 
 type Extracted = Pick<
   JobPost,
@@ -41,7 +42,9 @@ function extractViewer(document: Document): Extracted {
     const parts = Array.from(tile.querySelectorAll(':scope > div > span'))
       .map((el) => collapseWhitespace(el.textContent ?? ''))
       .filter(Boolean);
-    budgetText = parts.length ? parts.join(' · ') : collapseWhitespace(tile.textContent ?? '');
+    budgetText = parts.length
+      ? parts.join(' · ')
+      : collapseWhitespace(tile.textContent ?? '');
     break;
   }
 
@@ -62,7 +65,10 @@ function cardDescription(document: Document): string | null {
       .map((p) => collapseWhitespace(textWithBreaks(p)))
       .filter(Boolean);
     if (paragraphs.length) return paragraphs.join('\n\n');
-    const text = collapseWhitespace(container.textContent ?? '').replace(/^Summary\s*/i, '');
+    const text = collapseWhitespace(container.textContent ?? '').replace(
+      /^Summary\s*/i,
+      '',
+    );
     if (text) return text;
   }
   return firstText(document, upworkSelectors.description);
@@ -76,7 +82,8 @@ function cardBudget(document: Document): string | undefined {
       .map((el) => collapseWhitespace(el.textContent ?? ''))
       .filter((t) => t.includes('$'));
     const kind = collapseWhitespace(li.querySelector('.description')?.textContent ?? '');
-    if (amounts.length) return kind ? `${amounts.join(' - ')} · ${kind}` : amounts.join(' - ');
+    if (amounts.length)
+      return kind ? `${amounts.join(' - ')} · ${kind}` : amounts.join(' - ');
   }
   return firstText(document, upworkSelectors.budget) ?? undefined;
 }
@@ -112,6 +119,22 @@ export const upworkAdapter: Adapter = {
     }
   },
   extract(document: Document, url: string): JobPost | ExtractError {
+    // "Submit a proposal" page: job details plus the client's screening questions.
+    if (isApplyPage(document)) {
+      const applied = extractApply(document);
+      if (applied) {
+        const { description, truncated } = normalizeDescription(applied.description);
+        return {
+          platform: 'upwork',
+          url,
+          ...applied,
+          description,
+          extractedAt: new Date().toISOString(),
+          truncated,
+        };
+      }
+    }
+
     if (!hasAny(document, upworkSelectors.jobPageMarker)) {
       return {
         code: 'NOT_A_JOB_PAGE',

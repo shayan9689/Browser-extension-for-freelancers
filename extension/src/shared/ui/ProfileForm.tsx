@@ -17,42 +17,111 @@ export const NICHES = [
   {
     label: 'Web development',
     headline: 'Full-stack web developer (React, Node.js)',
-    skills: ['React', 'Next.js', 'Node.js', 'TypeScript', 'JavaScript', 'Python', 'Laravel', 'REST APIs', 'PostgreSQL', 'Tailwind CSS'],
+    skills: [
+      'React',
+      'Next.js',
+      'Node.js',
+      'TypeScript',
+      'JavaScript',
+      'Python',
+      'Laravel',
+      'REST APIs',
+      'PostgreSQL',
+      'Tailwind CSS',
+    ],
   },
   {
     label: 'WordPress & Shopify',
     headline: 'WordPress and Shopify store developer',
-    skills: ['WordPress', 'Elementor', 'WooCommerce', 'Shopify', 'Liquid', 'PHP', 'Speed optimization', 'SEO setup'],
+    skills: [
+      'WordPress',
+      'Elementor',
+      'WooCommerce',
+      'Shopify',
+      'Liquid',
+      'PHP',
+      'Speed optimization',
+      'SEO setup',
+    ],
   },
   {
     label: 'Mobile apps',
     headline: 'Mobile app developer (Flutter, React Native)',
-    skills: ['Flutter', 'Dart', 'React Native', 'Firebase', 'Kotlin', 'Swift', 'App Store publishing'],
+    skills: [
+      'Flutter',
+      'Dart',
+      'React Native',
+      'Firebase',
+      'Kotlin',
+      'Swift',
+      'App Store publishing',
+    ],
   },
   {
     label: 'UI/UX & graphic design',
     headline: 'UI/UX and brand designer',
-    skills: ['Figma', 'UI design', 'UX research', 'Logo design', 'Brand identity', 'Adobe Illustrator', 'Photoshop', 'Webflow'],
+    skills: [
+      'Figma',
+      'UI design',
+      'UX research',
+      'Logo design',
+      'Brand identity',
+      'Adobe Illustrator',
+      'Photoshop',
+      'Webflow',
+    ],
   },
   {
     label: 'Data & automation',
     headline: 'Python data and automation specialist',
-    skills: ['Python', 'pandas', 'Web scraping', 'Excel', 'Google Sheets', 'Power BI', 'SQL', 'Zapier'],
+    skills: [
+      'Python',
+      'pandas',
+      'Web scraping',
+      'Excel',
+      'Google Sheets',
+      'Power BI',
+      'SQL',
+      'Zapier',
+    ],
   },
   {
     label: 'AI & chatbots',
     headline: 'AI developer building chatbots and LLM apps',
-    skills: ['Python', 'OpenAI API', 'LangChain', 'RAG', 'Prompt engineering', 'FastAPI', 'Vector databases'],
+    skills: [
+      'Python',
+      'OpenAI API',
+      'LangChain',
+      'RAG',
+      'Prompt engineering',
+      'FastAPI',
+      'Vector databases',
+    ],
   },
   {
     label: 'Writing & content',
     headline: 'Content writer and copywriter',
-    skills: ['Blog writing', 'Copywriting', 'SEO writing', 'Technical writing', 'Proofreading', 'Product descriptions'],
+    skills: [
+      'Blog writing',
+      'Copywriting',
+      'SEO writing',
+      'Technical writing',
+      'Proofreading',
+      'Product descriptions',
+    ],
   },
   {
     label: 'Video & marketing',
     headline: 'Video editor and social media marketer',
-    skills: ['Video editing', 'Premiere Pro', 'After Effects', 'CapCut', 'Social media marketing', 'Meta Ads', 'Canva'],
+    skills: [
+      'Video editing',
+      'Premiere Pro',
+      'After Effects',
+      'CapCut',
+      'Social media marketing',
+      'Meta Ads',
+      'Canva',
+    ],
   },
 ] as const;
 
@@ -205,7 +274,8 @@ export function RateSection({ value, errors, onChange }: Props) {
   const setLevel = (level: ExperienceLevel) => {
     // Move the rate along with the level unless the user typed their own.
     const usingDefault =
-      value.hourlyRate === null || value.hourlyRate === DEFAULT_RATES[value.experienceLevel];
+      value.hourlyRate === null ||
+      value.hourlyRate === DEFAULT_RATES[value.experienceLevel];
     onChange({
       ...value,
       experienceLevel: level,
@@ -216,7 +286,11 @@ export function RateSection({ value, errors, onChange }: Props) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
         <span className="pp-label">Experience level</span>
-        <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Experience level">
+        <div
+          className="grid gap-2 sm:grid-cols-3"
+          role="radiogroup"
+          aria-label="Experience level"
+        >
           {EXPERIENCE_LEVELS.map((level) => (
             <button
               key={level}
@@ -244,7 +318,10 @@ export function RateSection({ value, errors, onChange }: Props) {
               className="pp-input"
               value={value.yearsExperience}
               onChange={(e) =>
-                onChange({ ...value, yearsExperience: Math.max(0, Number(e.target.value) || 0) })
+                onChange({
+                  ...value,
+                  yearsExperience: Math.max(0, Number(e.target.value) || 0),
+                })
               }
             />
           )}
@@ -273,15 +350,32 @@ export function RateSection({ value, errors, onChange }: Props) {
               className="pp-input uppercase"
               value={value.currency}
               maxLength={3}
-              onChange={(e) => onChange({ ...value, currency: e.target.value.toUpperCase() })}
+              onChange={(e) =>
+                onChange({ ...value, currency: e.target.value.toUpperCase() })
+              }
             />
           )}
         </Field>
       </div>
+      <Field
+        label="Availability (optional)"
+        hint='Used to answer "How soon can you start?". Leave empty if it changes often.'
+      >
+        {(id) => (
+          <input
+            id={id}
+            className="pp-input"
+            value={value.availability ?? ''}
+            placeholder="e.g. Can start this week, about 30 hours a week"
+            maxLength={200}
+            onChange={(e) => onChange({ ...value, availability: e.target.value })}
+          />
+        )}
+      </Field>
       <p className="pp-notice pp-notice-info text-xs leading-relaxed">
         Prices are estimated as working hours x your rate, and delivery as a competitive
-        marketplace turnaround. Defaults follow typical rates for Pakistani freelancers; change
-        them to your own.
+        marketplace turnaround. Defaults follow typical rates for Pakistani freelancers;
+        change them to your own.
       </p>
     </div>
   );

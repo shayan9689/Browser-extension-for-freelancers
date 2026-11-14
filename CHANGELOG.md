@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Answers to client screening questions: paste the questions on the job screen (one per
+  line, up to 10) and get a short, honest answer for each, with its own Copy button
+- Upwork "Submit a proposal" page is detected: title, budget, experience level, skills, the
+  full description (from the page data, not the truncated preview) and the client's
+  screening questions are filled in automatically
+- Optional "Availability" profile field, used for "How soon can you start?" answers; without
+  it the answer never invents a start date and a warning asks you to add it
+- Backend: `job.questions` and `profile.availability` in, `answers` out (prompt
+  `2026-11-15.2`); older extension versions keep working unchanged
+
 ## [1.1.0] - 2026-11-15
 
 ### Added

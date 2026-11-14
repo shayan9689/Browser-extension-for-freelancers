@@ -8,6 +8,8 @@ export type JobPost = {
   budgetText?: string;
   skills: string[];
   experienceLevel?: string;
+  /** Screening questions from the application form, if any. */
+  questions?: string[];
   extractedAt: string;
   truncated: boolean;
 };

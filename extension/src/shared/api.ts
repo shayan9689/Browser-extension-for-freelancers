@@ -9,6 +9,7 @@ export type ProposalApiRequest = {
     description: string;
     budget_text?: string | null;
     skills: string[];
+    questions?: string[];
   };
   profile: {
     name: string;
@@ -19,6 +20,7 @@ export type ProposalApiRequest = {
     currency: string;
     highlights: string[];
     experience_level?: 'entry' | 'intermediate' | 'expert';
+    availability?: string | null;
   };
   options: { tone: Tone; length: Length };
 };
@@ -29,6 +31,8 @@ export type ProposalApiResponse = {
   delivery_days: number;
   questions_to_ask: string[];
   warnings: string[];
+  /** Answers to the job's screening questions (older servers omit it). */
+  answers?: { question: string; answer: string }[];
 };
 
 export type ConversationApiRequest = {

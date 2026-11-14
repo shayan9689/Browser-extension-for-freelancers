@@ -41,6 +41,7 @@ import {
   JobReadyView,
   NewJobBanner,
   NoProjectView,
+  parseQuestions,
   ProfileBanner,
   ProfilePicker,
   ResultView,
@@ -147,6 +148,7 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
   const [hydrated, setHydrated] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copiedQuestion, setCopiedQuestion] = useState<string | null>(null);
+  const [copiedAnswer, setCopiedAnswer] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [installId, setInstallId] = useState<string>('');
   const [profiles, setProfiles] = useState<ProfileRecord[]>([]);
@@ -471,16 +473,22 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
       openSetup();
       return;
     }
+    // Questions edited on the job screen travel with the job (also for Regenerate).
+    const questions =
+      state.status === 'ready' && state.questionsText !== undefined
+        ? parseQuestions(state.questionsText)
+        : (job.questions ?? []);
+    const asked: JobPost = { ...job, questions };
 
     const requestId = crypto.randomUUID();
     // Save first: the worker only writes its result while this request is
     // the one being shown.
-    await commit({ status: 'generating', job, editedDescription, requestId });
+    await commit({ status: 'generating', job: asked, editedDescription, requestId });
 
     const message: GenerateMessage = {
       type: 'PP_GENERATE',
       requestId,
-      job,
+      job: asked,
       editedDescription,
       tone,
       length,
@@ -495,6 +503,7 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
           description: editedDescription,
           budget_text: job.budgetText ?? null,
           skills: job.skills,
+          questions,
         },
         profile: {
           name: profile.name,
@@ -505,6 +514,7 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
           currency: profile.currency,
           highlights: profile.highlights,
           experience_level: profile.experienceLevel,
+          availability: profile.availability?.trim() || null,
         },
         options: { tone, length },
       },
@@ -761,6 +771,10 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
                   />
                 }
                 optionsReady={Boolean(state.toneChosen && state.lengthChosen)}
+                questionsText={
+                  state.questionsText ?? (state.job.questions ?? []).join('\n')
+                }
+                onQuestionsChange={(v) => setState({ ...state, questionsText: v })}
                 onGenerate={() => void runGenerate()}
                 onBack={backToIdle}
                 picker={picker}
@@ -803,6 +817,13 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
                 onNewJob={backToIdle}
                 picker={readyProfiles.length > 1 ? picker : undefined}
                 profileLabel={state.profileLabel}
+                copiedAnswer={copiedAnswer}
+                onCopyAnswer={async (a) => {
+                  if (await copyText(a)) {
+                    setCopiedAnswer(a);
+                    setTimeout(() => setCopiedAnswer(null), 1500);
+                  }
+                }}
               />
             ) : null}
 

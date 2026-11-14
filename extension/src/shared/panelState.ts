@@ -28,6 +28,8 @@ export type PanelState =
       /** Tone and length must be picked for each job before generating. */
       toneChosen?: boolean;
       lengthChosen?: boolean;
+      /** Screening questions as typed, one per line. */
+      questionsText?: string;
     }
   | {
       status: 'generating';

@@ -26,6 +26,15 @@ import {
 } from '../shared/ui/icons';
 import type { ProfileRecord } from '../shared/storage';
 
+/** Screening questions typed one per line (max 10). */
+export function parseQuestions(text: string): string[] {
+  return text
+    .split('\n')
+    .map((q) => q.replace(/^\s*(?:\d+[.)]|[-*•])\s*/, '').trim())
+    .filter(Boolean)
+    .slice(0, 10);
+}
+
 export function wordCount(text: string): number {
   return text.trim() ? text.trim().split(/\s+/).length : 0;
 }
@@ -48,7 +57,9 @@ export function Header(props: { onSettings: () => void; onOpenSidePanel?: () => 
         <h1 className="text-[15px] leading-tight font-bold tracking-tight">
           Proposal<span className="pp-gradient-text">Pilot</span>
         </h1>
-        <p className="pp-muted truncate text-xs">AI drafts from the job you are viewing</p>
+        <p className="pp-muted truncate text-xs">
+          AI drafts from the job you are viewing
+        </p>
       </div>
       {props.onOpenSidePanel ? (
         <button
@@ -110,7 +121,11 @@ export function ProfileBanner(props: { onOpen: () => void; missing: string[] }) 
           Drafts are written from your real experience, so a complete profile is required.
           {props.missing.length > 0 ? ` Still needed: ${props.missing.join(', ')}.` : ''}
         </p>
-        <button type="button" className="pp-btn pp-btn-primary pp-btn-sm mt-2" onClick={props.onOpen}>
+        <button
+          type="button"
+          className="pp-btn pp-btn-primary pp-btn-sm mt-2"
+          onClick={props.onOpen}
+        >
           Set up profile
         </button>
       </div>
@@ -143,7 +158,11 @@ export function ProfilePicker(props: {
           </option>
         ))}
       </select>
-      <button type="button" className="pp-link shrink-0 text-[11px]" onClick={props.onManage}>
+      <button
+        type="button"
+        className="pp-link shrink-0 text-[11px]"
+        onClick={props.onManage}
+      >
         Manage
       </button>
     </div>
@@ -151,7 +170,11 @@ export function ProfilePicker(props: {
 }
 
 /** Shown over a finished draft when the open tab has a different job. */
-export function NewJobBanner(props: { title: string; onUse: () => void; onDismiss: () => void }) {
+export function NewJobBanner(props: {
+  title: string;
+  onUse: () => void;
+  onDismiss: () => void;
+}) {
   return (
     <div className="pp-notice pp-notice-info pp-enter flex items-start gap-3">
       <span className="mt-0.5 text-sky-400">
@@ -160,7 +183,11 @@ export function NewJobBanner(props: { title: string; onUse: () => void; onDismis
       <div className="min-w-0 flex-1 text-xs leading-relaxed">
         <p className="pp-notice-title">New job on this page</p>
         <p className="pp-muted truncate">{props.title}</p>
-        <button type="button" className="pp-btn pp-btn-primary pp-btn-sm mt-2" onClick={props.onUse}>
+        <button
+          type="button"
+          className="pp-btn pp-btn-primary pp-btn-sm mt-2"
+          onClick={props.onUse}
+        >
           Draft for this job
         </button>
       </div>
@@ -248,7 +275,10 @@ export function RightClickTip() {
   );
 }
 
-export function PasteBox(props: { onSubmit: (text: string) => void; defaultOpen?: boolean }) {
+export function PasteBox(props: {
+  onSubmit: (text: string) => void;
+  defaultOpen?: boolean;
+}) {
   const [text, setText] = useState('');
   const tooShort = text.trim().length < 30;
   return (
@@ -348,7 +378,10 @@ export function JobReadyView(props: {
   onSetup: () => void;
   options: ReactNode;
   optionsReady: boolean;
+  questionsText: string;
+  onQuestionsChange: (v: string) => void;
 }) {
+  const questionCount = parseQuestions(props.questionsText).length;
   return (
     <section className="pp-stagger flex flex-col gap-3">
       <div className="pp-card flex flex-col gap-3 p-4">
@@ -375,6 +408,32 @@ export function JobReadyView(props: {
               onChange={(e) => props.onDescriptionChange(e.target.value)}
               aria-label="Extracted job text"
             />
+          </div>
+        </details>
+        <details
+          className="pp-details rounded-xl border border-[var(--pp-border)] bg-[var(--pp-surface-2)]"
+          open={questionCount > 0}
+        >
+          <summary className="flex items-center justify-between gap-2 px-3 py-2.5 text-xs font-semibold">
+            <span>
+              Screening questions{' '}
+              <span className="pp-faint font-normal">
+                · {questionCount > 0 ? `${questionCount} to answer` : 'optional'}
+              </span>
+            </span>
+            <IconChevronDown className="pp-chevron pp-muted" />
+          </summary>
+          <div className="flex flex-col gap-1.5 px-3 pb-3">
+            <textarea
+              className="pp-textarea min-h-20 text-xs"
+              value={props.questionsText}
+              onChange={(e) => props.onQuestionsChange(e.target.value)}
+              placeholder={'One question per line, e.g.\nHow soon can you start?'}
+              aria-label="Screening questions, one per line"
+            />
+            <span className="pp-faint text-[11px]">
+              Paste the client&apos;s questions; each gets its own answer. Up to 10.
+            </span>
           </div>
         </details>
         {props.canGenerate ? (
@@ -405,7 +464,11 @@ export function JobReadyView(props: {
           </button>
         )}
       </div>
-      <button type="button" className="pp-btn pp-btn-ghost pp-btn-sm self-start" onClick={props.onBack}>
+      <button
+        type="button"
+        className="pp-btn pp-btn-ghost pp-btn-sm self-start"
+        onClick={props.onBack}
+      >
         <IconArrowLeft size={14} />
         Different job
       </button>
@@ -430,7 +493,10 @@ export function GeneratingView(props: { job: JobPost; onCancel: () => void }) {
     return () => clearInterval(timer);
   }, []);
   return (
-    <section className="pp-card pp-card-glow pp-enter flex flex-col gap-4 p-4" aria-busy="true">
+    <section
+      className="pp-card pp-card-glow pp-enter flex flex-col gap-4 p-4"
+      aria-busy="true"
+    >
       <div className="flex items-center gap-3.5">
         <div className="pp-orb">
           <IconSparkles size={18} />
@@ -448,7 +514,11 @@ export function GeneratingView(props: { job: JobPost; onCancel: () => void }) {
         <div className="pp-skeleton h-3 w-11/12" />
         <div className="pp-skeleton h-3 w-4/5" />
       </div>
-      <button type="button" className="pp-btn pp-btn-secondary pp-btn-block" onClick={props.onCancel}>
+      <button
+        type="button"
+        className="pp-btn pp-btn-secondary pp-btn-block"
+        onClick={props.onCancel}
+      >
         Cancel
       </button>
     </section>
@@ -528,6 +598,8 @@ export function ResultView(props: {
   onNewJob: () => void;
   picker?: ReactNode;
   profileLabel?: string;
+  copiedAnswer: string | null;
+  onCopyAnswer: (answer: string) => void;
 }) {
   const [showWhy, setShowWhy] = useState(false);
   const { result } = props;
@@ -540,7 +612,11 @@ export function ResultView(props: {
   return (
     <section className="pp-stagger flex flex-col gap-3">
       <div className="flex items-center gap-2">
-        <button type="button" className="pp-btn pp-btn-secondary pp-btn-sm" onClick={props.onNewJob}>
+        <button
+          type="button"
+          className="pp-btn pp-btn-secondary pp-btn-sm"
+          onClick={props.onNewJob}
+        >
           <IconSparkles size={14} />
           New proposal
         </button>
@@ -603,7 +679,11 @@ export function ResultView(props: {
               </>
             )}
           </button>
-          <button type="button" className="pp-btn pp-btn-secondary pp-btn-lg" onClick={props.onRegenerate}>
+          <button
+            type="button"
+            className="pp-btn pp-btn-secondary pp-btn-lg"
+            onClick={props.onRegenerate}
+          >
             <IconRefresh />
             Regenerate
           </button>
@@ -644,6 +724,42 @@ export function ResultView(props: {
         <p className="pp-notice pp-notice-info pp-enter text-xs leading-relaxed">
           {price.rationale}
         </p>
+      ) : null}
+
+      {result.answers && result.answers.length > 0 ? (
+        <div className="pp-card flex flex-col gap-2 p-3.5">
+          <p className="pp-label flex items-center gap-1.5">
+            <IconQuestion size={12} /> Screening answers
+          </p>
+          <ul className="flex flex-col gap-2">
+            {result.answers.map((a) => (
+              <li
+                key={a.question}
+                className="flex flex-col gap-1.5 rounded-lg bg-[var(--pp-surface-2)] p-2.5"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-xs font-semibold leading-snug">{a.question}</span>
+                  <button
+                    type="button"
+                    className="pp-icon-btn !h-7 !w-7 shrink-0"
+                    onClick={() => props.onCopyAnswer(a.answer)}
+                    aria-label="Copy answer"
+                    title="Copy answer"
+                  >
+                    {props.copiedAnswer === a.answer ? (
+                      <span className="pp-pop text-[var(--pp-brand-strong)]">
+                        <IconCheck size={14} />
+                      </span>
+                    ) : (
+                      <IconCopy size={14} />
+                    )}
+                  </button>
+                </div>
+                <p className="pp-muted text-xs leading-relaxed">{a.answer}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
 
       {result.warnings.length > 0 ? (
@@ -691,7 +807,6 @@ export function ResultView(props: {
           </ul>
         </div>
       ) : null}
-
     </section>
   );
 }
@@ -713,7 +828,11 @@ export function GuideView(props: {
         <div className="flex-1 text-xs leading-relaxed">
           <p className="pp-notice-title">{props.title}</p>
           <p className="pp-muted mt-0.5">{props.message}</p>
-          <button type="button" className="pp-link mt-1.5 text-xs" onClick={props.onRetry}>
+          <button
+            type="button"
+            className="pp-link mt-1.5 text-xs"
+            onClick={props.onRetry}
+          >
             Try again
           </button>
         </div>
@@ -773,7 +892,9 @@ export function ConversationView(props: {
   onBack: () => void;
 }) {
   const { conversation } = props;
-  const lastClient = [...conversation.messages].reverse().find((m) => m.role === 'client');
+  const lastClient = [...conversation.messages]
+    .reverse()
+    .find((m) => m.role === 'client');
   const preview = lastClient
     ? lastClient.text.length > 160
       ? `${lastClient.text.slice(0, 159).trimEnd()}…`
@@ -785,14 +906,17 @@ export function ConversationView(props: {
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="pp-badge">{CHAT_PLATFORM[conversation.platform]}</span>
           <span className="pp-badge">
-            {conversation.messages.length} messages · {conversation.clientMessages} from client
+            {conversation.messages.length} messages · {conversation.clientMessages} from
+            client
           </span>
         </div>
         <div>
-          <h2 className="text-[15px] leading-snug font-bold tracking-tight">Conversation found</h2>
+          <h2 className="text-[15px] leading-snug font-bold tracking-tight">
+            Conversation found
+          </h2>
           <p className="pp-muted mt-1 text-[13px] leading-relaxed">
-            Check whether the client has described a project in this chat. If they have, you get
-            the details and can draft a reply.
+            Check whether the client has described a project in this chat. If they have,
+            you get the details and can draft a reply.
           </p>
         </div>
         {preview ? (
@@ -811,10 +935,15 @@ export function ConversationView(props: {
         </button>
         <p className="pp-faint flex items-start gap-1.5 text-[11px] leading-relaxed">
           <IconShield size={12} className="mt-0.5 shrink-0" />
-          The chat is sent to the AI only when you click, with names removed. It is not stored.
+          The chat is sent to the AI only when you click, with names removed. It is not
+          stored.
         </p>
       </div>
-      <button type="button" className="pp-btn pp-btn-ghost pp-btn-sm self-start" onClick={props.onBack}>
+      <button
+        type="button"
+        className="pp-btn pp-btn-ghost pp-btn-sm self-start"
+        onClick={props.onBack}
+      >
         <IconArrowLeft size={14} />
         Different job
       </button>
@@ -822,9 +951,15 @@ export function ConversationView(props: {
   );
 }
 
-export function AnalyzingView(props: { conversation: Conversation; onCancel: () => void }) {
+export function AnalyzingView(props: {
+  conversation: Conversation;
+  onCancel: () => void;
+}) {
   return (
-    <section className="pp-card pp-card-glow pp-enter flex flex-col gap-4 p-4" aria-busy="true">
+    <section
+      className="pp-card pp-card-glow pp-enter flex flex-col gap-4 p-4"
+      aria-busy="true"
+    >
       <div className="flex items-center gap-3.5">
         <div className="pp-orb">
           <IconSearch size={18} />
@@ -837,7 +972,11 @@ export function AnalyzingView(props: { conversation: Conversation; onCancel: () 
         </div>
       </div>
       <div className="pp-progress" />
-      <button type="button" className="pp-btn pp-btn-secondary pp-btn-block" onClick={props.onCancel}>
+      <button
+        type="button"
+        className="pp-btn pp-btn-secondary pp-btn-block"
+        onClick={props.onCancel}
+      >
         Cancel
       </button>
     </section>
@@ -858,11 +997,15 @@ export function NoProjectView(props: {
         <div className="flex-1 text-xs leading-relaxed">
           <p className="pp-notice-title">No project discussed yet</p>
           <p className="pp-muted mt-0.5">
-            This chat is just a simple conversation. The client hasn&apos;t described any work to
-            be done.
+            This chat is just a simple conversation. The client hasn&apos;t described any
+            work to be done.
           </p>
           {props.reason ? <p className="pp-faint mt-1.5">AI: {props.reason}</p> : null}
-          <button type="button" className="pp-link mt-1.5 text-xs" onClick={props.onRecheck}>
+          <button
+            type="button"
+            className="pp-link mt-1.5 text-xs"
+            onClick={props.onRecheck}
+          >
             Check again
           </button>
         </div>

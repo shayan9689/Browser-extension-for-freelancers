@@ -38,6 +38,7 @@ export const profileSchema = z.object({
   defaultTone: z.enum(['friendly', 'professional', 'concise']),
   defaultLength: z.enum(['short', 'medium']),
   signOff: z.string().max(200).optional(),
+  availability: z.string().max(200).optional(),
 });
 
 export type Profile = z.infer<typeof profileSchema>;
@@ -84,6 +85,7 @@ const DEFAULT_PROFILE: Profile = {
   defaultTone: 'professional',
   defaultLength: 'short',
   signOff: '',
+  availability: '',
 };
 
 function emptyStore(installId: string): StoredData {

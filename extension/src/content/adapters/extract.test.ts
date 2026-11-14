@@ -17,10 +17,7 @@ function loadDocument(name: string): Document {
 describe('fiverr fixture', () => {
   it('extracts title, description length, and budget', () => {
     const doc = loadDocument('fiverr-job.html');
-    const result = extractJobPost(
-      doc,
-      'https://www.fiverr.com/users/buyer/requests/abc',
-    );
+    const result = extractJobPost(doc, 'https://www.fiverr.com/users/buyer/requests/abc');
     expect('title' in result).toBe(true);
     if (!('title' in result)) return;
     expect(result.platform).toBe('fiverr');
@@ -35,10 +32,7 @@ describe('fiverr fixture', () => {
 describe('upwork fixture', () => {
   it('extracts title, description length, and budget', () => {
     const doc = loadDocument('upwork-job.html');
-    const result = extractJobPost(
-      doc,
-      'https://www.upwork.com/jobs/~0123456789abcdef',
-    );
+    const result = extractJobPost(doc, 'https://www.upwork.com/jobs/~0123456789abcdef');
     expect('title' in result).toBe(true);
     if (!('title' in result)) return;
     expect(result.platform).toBe('upwork');
@@ -107,7 +101,13 @@ describe('fiverr inbox conversation', () => {
     const all = c?.messages.map((m) => m.text).join(' ') ?? '';
     expect(all).toContain('Budget $80');
     expect(all).toContain('booking page for my yoga studio. It must work on phones.');
-    for (const hidden of ['buyer_demo', 'seller_demo', 'Buyer Demo', '10:09', 'Create an offer']) {
+    for (const hidden of [
+      'buyer_demo',
+      'seller_demo',
+      'Buyer Demo',
+      '10:09',
+      'Create an offer',
+    ]) {
       expect(all).not.toContain(hidden);
     }
   });
@@ -135,7 +135,9 @@ describe('fiverr inbox custom order request', () => {
     expect(result.platform).toBe('fiverr');
     expect(result.title).toBe('Custom Order Request');
     expect(result.budgetText).toBe('$120');
-    expect(result.description).toContain('landing page redesign for my bakery website. Milestone 1');
+    expect(result.description).toContain(
+      'landing page redesign for my bakery website. Milestone 1',
+    );
     expect(result.description).toContain('Request details: Budget $120; 3 days delivery');
     expect(result.description).not.toContain('Create an offer');
   });
@@ -165,7 +167,9 @@ describe('upwork slider (job viewer) layout', () => {
     const result = extractJobPost(loadDocument('upwork-slider-2026.html'), url);
     if (!('description' in result)) throw new Error('expected a job');
     expect(result.description.startsWith('Hello, We need a Telegram bot')).toBe(true);
-    expect(result.description).toContain('REST API. - Node.js preferred - Must handle payments');
+    expect(result.description).toContain(
+      'REST API. - Node.js preferred - Must handle payments',
+    );
     expect(result.description).not.toMatch(/More$/);
   });
 
@@ -208,5 +212,42 @@ describe('generic selection', () => {
       preferSelection: true,
     });
     expect(result).toMatchObject({ code: 'EMPTY_SELECTION' });
+  });
+});
+
+describe('upwork apply page', () => {
+  const url = 'https://www.upwork.com/ab/proposals/job/~0000/apply/';
+
+  it('reads job details, the full description and screening questions', () => {
+    const doc = loadDocument('upwork-apply-2026.html');
+    const result = extractJobPost(doc, url);
+    expect('title' in result).toBe(true);
+    if (!('title' in result)) return;
+    expect(result.platform).toBe('upwork');
+    expect(result.title).toBe('Shopify speed optimization for a fashion store');
+    expect(result.budgetText).toBe('$300 · Fixed-price');
+    expect(result.experienceLevel).toBe('Intermediate');
+    expect(result.skills).toEqual(['Shopify', 'Page Speed Optimization']);
+    // Full text from the page data, not the truncated "…more" preview.
+    expect(result.description).toContain('Core Web Vitals must pass on mobile.');
+    // Payload questions first, then labels from the form (deduplicated, cover letter ignored).
+    expect(result.questions).toEqual([
+      'Describe your recent experience with similar projects',
+      'Which Shopify apps would you remove first, and why?',
+      'How soon can you start?',
+    ]);
+  });
+
+  it('falls back to the visible description without page data', () => {
+    const doc = loadDocument('upwork-apply-2026.html');
+    doc.querySelector('script[data-nuxt-data]')?.remove();
+    const result = extractJobPost(doc, url);
+    if (!('title' in result)) throw new Error('expected a job');
+    expect(result.description).toContain('We want someone to audit the theme');
+    expect(result.description).not.toContain('more');
+    expect(result.questions).toEqual([
+      'Describe your recent experience with similar projects',
+      'How soon can you start?',
+    ]);
   });
 });
