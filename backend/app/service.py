@@ -25,6 +25,9 @@ logger = logging.getLogger("proposalpilot")
 
 Provider = FakeProvider | AnthropicProvider | OpenAIProvider
 
+# USD/hour used when the profile has no rate: typical Pakistani freelancer rates by level.
+DEFAULT_HOURLY_RATE = {"entry": 10.0, "intermediate": 20.0, "expert": 35.0}
+
 SAFE_FALLBACK = ProposalResponse(
     proposal=(
         "Thanks for sharing the project details. I can help based on the requirements "
@@ -145,7 +148,9 @@ def generate_proposal(request: ProposalRequest, provider: Provider) -> ProposalR
         "headline": request.profile.headline,
         "skills": request.profile.skills,
         "years_experience": request.profile.years_experience,
-        "hourly_rate": request.profile.hourly_rate,
+        "experience_level": request.profile.experience_level,
+        "hourly_rate": request.profile.hourly_rate
+        or DEFAULT_HOURLY_RATE[request.profile.experience_level],
         "currency": request.profile.currency,
         "highlights": request.profile.highlights,
     }

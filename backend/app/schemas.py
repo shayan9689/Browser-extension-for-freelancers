@@ -34,6 +34,8 @@ class ProfileInput(BaseModel):
     hourly_rate: float | None = Field(default=None, ge=0)
     currency: str = Field(default="USD", min_length=3, max_length=3)
     highlights: list[str] = Field(default_factory=list, max_length=5)
+    # Optional so older extension versions keep working.
+    experience_level: Literal["entry", "intermediate", "expert"] = "intermediate"
 
 
 class OptionsInput(BaseModel):

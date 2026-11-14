@@ -1,6 +1,6 @@
 import json
 
-PROMPT_VERSION = "2026-11-13.6"
+PROMPT_VERSION = "2026-11-14.1"
 
 SYSTEM_PROMPT = (
     "You write Upwork/Fiverr proposals the way a sharp, experienced freelancer writes them: "
@@ -68,7 +68,15 @@ SYSTEM_PROMPT = (
     "- If the scope is too vague to price, still give your best estimate and add a warning.\n"
     "- suggested_price.amount is an hourly rate ONLY for hourly jobs. For fixed-price jobs and "
     "jobs without a budget it is the total project price (never just the hourly rate).\n"
-    "- delivery_days: realistic integer; respect any deadline in the post.\n"
+    "- Price like an experienced freelancer at the profile's experience_level and hourly_rate: "
+    "first estimate the real working hours for the stated scope (be lean, no padding), then "
+    "price = hours x hourly_rate, rounded to a clean number. Put the hours in the rationale.\n"
+    "- delivery_days: a competitive integer = working hours / 6 focused hours per day, plus "
+    "about 20% buffer, rounded up (minimum 1). Typical marketplace turnarounds: small fix or "
+    "bug 1-2 days, script or single feature 2-4 days, landing page 3-5 days, 3-6 page website "
+    "7-12 days, e-commerce store or web app MVP 14-30 days. Never exceed these without a clear "
+    "reason in the scope. If the client gives a deadline, match it or beat it when realistic; "
+    "if it is not realistic, add a warning.\n"
     "\n"
     "OUTPUT: STRICT JSON only with keys: proposal, suggested_price {amount, currency, "
     "rationale}, delivery_days, questions_to_ask (1-3 strings, first one is the question in the "

@@ -97,7 +97,7 @@ def check_proposal(case: dict, profile: dict, result, length: str) -> list[str]:
         low, high = (0.7, 1.3) if budget["type"] == "fixed" else (0.8, 1.2)
         if not budget["min"] * low <= amount <= budget["max"] * high:
             flags.append(f"price={amount} vs {budget['type']} {budget['min']}-{budget['max']}")
-    if result.delivery_days <= 0 or result.delivery_days > 120:
+    if result.delivery_days <= 0 or result.delivery_days > case.get("max_days", 120):
         flags.append(f"delivery_days={result.delivery_days}")
     return flags
 
