@@ -10,7 +10,9 @@
 [![Release](https://img.shields.io/github/v/release/shayan9689/Browser-extension-for-freelancers)](https://github.com/shayan9689/Browser-extension-for-freelancers/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-14b8a6)
+[![Chrome Web Store](https://img.shields.io/badge/Chrome%20Web%20Store-Install-0ea5e9?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/proposalpilot/hhipbnhepdghapechikmncmboafgodfc)
 
+[Install from Chrome Web Store](https://chromewebstore.google.com/detail/proposalpilot/hhipbnhepdghapechikmncmboafgodfc) ·
 [Demo job post](https://shayan9689.github.io/Browser-extension-for-freelancers/demo/job-post.html) ·
 [Privacy policy](https://shayan9689.github.io/Browser-extension-for-freelancers/privacy-policy.html) ·
 [Changelog](CHANGELOG.md)
@@ -18,36 +20,40 @@
 </div>
 
 <p align="center">
-  <img src="docs/images/popup-start.png" alt="Start screen" width="31%">
+  <img src="docs/images/welcome.png" alt="Welcome page with guided profile setup" width="100%">
+</p>
+<p align="center">
+  <img src="docs/images/popup.png" alt="Popup with a generated draft" width="32%">
   &nbsp;
-  <img src="docs/images/popup-job.png" alt="Job detected" width="31%">
-  &nbsp;
-  <img src="docs/images/popup-draft.png" alt="Generated draft" width="31%">
+  <img src="docs/images/settings.png" alt="Settings with niche profiles and history" width="64%">
 </p>
 
 ProposalPilot reads the job post, writes a short proposal based only on your profile, and suggests a price and delivery time. You edit it, copy it and send it yourself. It never clicks, types or submits anything on a marketplace.
 
 ## ✨ Features
 
+- 🚀 **Guided setup:** a welcome page on install walks you through your profile in four short steps
+- 🧩 **A profile per niche** (web, WordPress, design, data...): the best match is picked for each job, and you can switch
 - 🎯 **Job detection** on Upwork (job pages and the Best matches slider) and Fiverr (reads your inbox chat and tells you if a project was discussed)
 - 🖱️ **Works on any site:** highlight text and open the popup, right-click → *Draft proposal with ProposalPilot*, or paste
-- ✍️ **Grounded drafts:** uses only facts from your profile, with a price, a delivery estimate and a question to ask the client
-- 🪟 **Floating popup** (`Alt+Shift+P`) that keeps your draft if it closes, plus a one-click side panel for long sessions
-- 🎨 **Light and dark themes**, tone and length controls, local history of your last 50 drafts
-- 🔒 **Private by design:** profile and history stay in your browser; job text is never stored on the server
+- ✍️ **Grounded drafts:** four short paragraphs from your real experience, with an honest note when a job asks for skills you don't list
+- 💰 **Fair price and timeline:** estimated from working hours x your rate, with competitive delivery days
+- ☁️ **Optional cloud sync:** sign in with Google to back up profiles and history and use them on any computer
+- 🪟 **Fixed-size popup** (`Alt+Shift+P`) with a pinned header, tone and length controls, plus a side panel for long sessions
 
 ## ⚙️ How it works
 
 ```mermaid
 flowchart LR
   Page[Job post] -->|read only| Ext[Extension popup]
-  Ext -->|job text + profile| API[FastAPI backend]
+  Ext -->|job text + chosen profile| API[FastAPI backend]
   API --> LLM[Groq free tier]
   LLM --> API --> Ext
   Ext --> You[You edit, copy and send]
+  Ext <-.->|optional sync| DB[(Supabase)]
 ```
 
-The extension never holds an API key. The backend keeps the key, applies rate limits and a daily cap, and runs on free tiers (Render + Groq).
+The extension never holds an AI key. The backend keeps it, applies rate limits and a daily cap, and runs on free tiers (Render + Groq). Cloud sync talks to Supabase directly, where row level security limits every user to their own rows. Setup: [docs/supabase-setup.md](docs/supabase-setup.md).
 
 ## 🚀 Getting started
 
@@ -84,6 +90,7 @@ npm run verify-zip                     # checks permissions, no localhost, manif
 | Extension | WXT, React 19, TypeScript, Tailwind CSS 4, Manifest V3 |
 | Backend | FastAPI, Python 3.12, Docker, optional Redis |
 | AI | Groq or Gemini (free), OpenAI or Anthropic (optional) |
+| Sync | Supabase (Postgres, row level security, Google sign-in) |
 | Quality | Vitest, pytest, Playwright, ESLint, Ruff, GitHub Actions |
 
 ## 🗂️ Project layout
@@ -91,6 +98,7 @@ npm run verify-zip                     # checks permissions, no localhost, manif
 ```text
 extension/   Chrome extension (popup, side panel, settings, content scripts)
 backend/     FastAPI service that calls the AI provider
+supabase/    Database schema for cloud sync
 docs/        Privacy policy, store listing, deploy guide, runbooks (GitHub Pages)
 ```
 
@@ -105,11 +113,13 @@ CI runs both on every push. Pushing a `vX.Y.Z` tag builds, verifies and attaches
 
 ## 🔐 Privacy
 
-Job text and your profile are sent only when you click **Generate**, and are not stored or logged on the server. Permissions are limited to `storage`, `sidePanel`, `activeTab`, `scripting` and `contextMenus`, with page access only on Upwork and Fiverr. Details: [privacy policy](docs/privacy-policy.md) and [permissions](docs/permissions.md).
+Job text and the chosen profile are sent only when you click **Generate**, and are not stored or logged on the AI server. Profiles and history stay in your browser unless you sign in to cloud sync. Permissions are limited to `storage`, `sidePanel`, `activeTab`, `scripting`, `contextMenus` and `identity` (Google sign-in only), with page access only on Upwork and Fiverr. Details: [privacy policy](docs/privacy-policy.md) and [permissions](docs/permissions.md).
 
 ## 🗺️ Roadmap
 
-- [ ] Chrome Web Store release
+- [x] [Chrome Web Store](https://chromewebstore.google.com/detail/proposalpilot/hhipbnhepdghapechikmncmboafgodfc) release
+- [x] Niche profiles, guided setup and cloud sync
+- [ ] Answers to client screening questions
 - [ ] Fiverr Briefs page support
 - [ ] Microsoft Edge Add-ons
 
