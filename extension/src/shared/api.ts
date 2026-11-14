@@ -18,6 +18,7 @@ export type ProposalApiRequest = {
     hourly_rate?: number | null;
     currency: string;
     highlights: string[];
+    experience_level?: 'entry' | 'intermediate' | 'expert';
   };
   options: { tone: Tone; length: Length };
 };

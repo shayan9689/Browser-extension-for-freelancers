@@ -22,7 +22,9 @@ import {
   IconSparkles,
   IconTag,
   IconUser,
+  IconX,
 } from '../shared/ui/icons';
+import type { ProfileRecord } from '../shared/storage';
 
 export function wordCount(text: string): number {
   return text.trim() ? text.trim().split(/\s+/).length : 0;
@@ -96,21 +98,80 @@ export function Stepper(props: { active: StepIndex }) {
   );
 }
 
-export function ProfileBanner(props: { onOpen: () => void }) {
+export function ProfileBanner(props: { onOpen: () => void; missing: string[] }) {
   return (
     <div className="pp-notice pp-notice-warn pp-enter flex items-start gap-3">
       <span className="mt-0.5 text-[var(--pp-warn-text)]">
         <IconUser />
       </span>
       <div className="flex-1 text-xs leading-relaxed">
-        <p className="pp-notice-title">Add your profile</p>
+        <p className="pp-notice-title">Set up your profile first</p>
         <p className="pp-muted">
-          Drafts use only facts from your profile. Without it they stay generic.
+          Drafts are written from your real experience, so a complete profile is required.
+          {props.missing.length > 0 ? ` Still needed: ${props.missing.join(', ')}.` : ''}
         </p>
-        <button type="button" className="pp-link mt-1 text-xs" onClick={props.onOpen}>
-          Complete profile →
+        <button type="button" className="pp-btn pp-btn-primary pp-btn-sm mt-2" onClick={props.onOpen}>
+          Set up profile
         </button>
       </div>
+    </div>
+  );
+}
+
+/** "Applying as" selector, shown when a job is ready or a draft is shown. */
+export function ProfilePicker(props: {
+  profiles: ProfileRecord[];
+  value: string | null;
+  onChange: (id: string) => void;
+  onManage: () => void;
+}) {
+  if (props.profiles.length === 0) return null;
+  return (
+    <div className="flex items-center gap-2">
+      <label htmlFor="pp-profile" className="pp-label shrink-0">
+        Applying as
+      </label>
+      <select
+        id="pp-profile"
+        className="pp-select !min-h-8 flex-1 !py-1 text-xs"
+        value={props.value ?? ''}
+        onChange={(e) => props.onChange(e.target.value)}
+      >
+        {props.profiles.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.label}
+          </option>
+        ))}
+      </select>
+      <button type="button" className="pp-link shrink-0 text-[11px]" onClick={props.onManage}>
+        Manage
+      </button>
+    </div>
+  );
+}
+
+/** Shown over a finished draft when the open tab has a different job. */
+export function NewJobBanner(props: { title: string; onUse: () => void; onDismiss: () => void }) {
+  return (
+    <div className="pp-notice pp-notice-info pp-enter flex items-start gap-3">
+      <span className="mt-0.5 text-sky-400">
+        <IconSparkles />
+      </span>
+      <div className="min-w-0 flex-1 text-xs leading-relaxed">
+        <p className="pp-notice-title">New job on this page</p>
+        <p className="pp-muted truncate">{props.title}</p>
+        <button type="button" className="pp-btn pp-btn-primary pp-btn-sm mt-2" onClick={props.onUse}>
+          Draft for this job
+        </button>
+      </div>
+      <button
+        type="button"
+        className="pp-icon-btn !h-7 !w-7"
+        aria-label="Dismiss"
+        onClick={props.onDismiss}
+      >
+        <IconX size={13} />
+      </button>
     </div>
   );
 }
@@ -282,9 +343,19 @@ export function JobReadyView(props: {
   onDescriptionChange: (v: string) => void;
   onGenerate: () => void;
   onBack: () => void;
+  picker?: ReactNode;
+  canGenerate: boolean;
+  onSetup: () => void;
+  options: ReactNode;
+  optionsReady: boolean;
 }) {
   return (
     <section className="pp-stagger flex flex-col gap-3">
+      <div className="pp-card flex flex-col gap-3 p-4">
+        <p className="pp-label">Choose your style</p>
+        {props.options}
+        {props.picker}
+      </div>
       <div className="pp-card pp-card-glow flex flex-col gap-4 p-4">
         <JobSummary job={props.job} />
         <details className="pp-details rounded-xl border border-[var(--pp-border)] bg-[var(--pp-surface-2)]">
@@ -306,14 +377,33 @@ export function JobReadyView(props: {
             />
           </div>
         </details>
-        <button
-          type="button"
-          className="pp-btn pp-btn-primary pp-btn-lg pp-btn-block"
-          onClick={props.onGenerate}
-        >
-          <IconSparkles />
-          Generate proposal
-        </button>
+        {props.canGenerate ? (
+          <div className="flex flex-col gap-1.5">
+            <button
+              type="button"
+              className="pp-btn pp-btn-primary pp-btn-lg pp-btn-block"
+              onClick={props.onGenerate}
+              disabled={!props.optionsReady}
+            >
+              <IconSparkles />
+              Generate proposal
+            </button>
+            {!props.optionsReady ? (
+              <p className="text-center text-[11px] font-semibold text-[var(--pp-warn-text)]">
+                Choose a tone and a length above first
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="pp-btn pp-btn-primary pp-btn-lg pp-btn-block"
+            onClick={props.onSetup}
+          >
+            <IconUser />
+            Set up your profile to generate
+          </button>
+        )}
       </div>
       <button type="button" className="pp-btn pp-btn-ghost pp-btn-sm self-start" onClick={props.onBack}>
         <IconArrowLeft size={14} />
@@ -367,16 +457,21 @@ export function GeneratingView(props: { job: JobPost; onCancel: () => void }) {
 
 /* ---------------- Result ---------------- */
 
-function Segmented<T extends string>(props: {
+function BlockSegment<T extends string>(props: {
   label: string;
-  value: T;
+  value: T | null;
   options: readonly T[];
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-2">
+    <div className="flex flex-col gap-1.5">
       <span className="pp-label">{props.label}</span>
-      <div className="pp-segment" role="group" aria-label={props.label}>
+      <div
+        className="pp-segment pp-segment-block"
+        role="group"
+        aria-label={props.label}
+        data-empty={props.value === null || undefined}
+      >
         {props.options.map((o) => (
           <button
             key={o}
@@ -388,6 +483,31 @@ function Segmented<T extends string>(props: {
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+/** Tone and length pickers; `null` means not chosen yet. */
+export function DraftOptions(props: {
+  tone: Tone | null;
+  length: Length | null;
+  onTone: (t: Tone) => void;
+  onLength: (l: Length) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2.5">
+      <BlockSegment
+        label="Tone"
+        value={props.tone}
+        options={['friendly', 'professional', 'concise'] as const}
+        onChange={props.onTone}
+      />
+      <BlockSegment
+        label="Length"
+        value={props.length}
+        options={['short', 'medium'] as const}
+        onChange={props.onLength}
+      />
     </div>
   );
 }
@@ -406,6 +526,8 @@ export function ResultView(props: {
   onCopyQuestion: (q: string) => void;
   onRegenerate: () => void;
   onNewJob: () => void;
+  picker?: ReactNode;
+  profileLabel?: string;
 }) {
   const [showWhy, setShowWhy] = useState(false);
   const { result } = props;
@@ -417,6 +539,34 @@ export function ResultView(props: {
 
   return (
     <section className="pp-stagger flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <button type="button" className="pp-btn pp-btn-secondary pp-btn-sm" onClick={props.onNewJob}>
+          <IconSparkles size={14} />
+          New proposal
+        </button>
+        <span className="pp-faint min-w-0 flex-1 truncate text-[11px]">
+          {props.profileLabel ? `Drafted as ${props.profileLabel}` : ''}
+        </span>
+        <button
+          type="button"
+          className="pp-icon-btn !h-8 !w-8"
+          onClick={props.onNewJob}
+          aria-label="Close draft"
+          title="Close draft"
+        >
+          <IconX size={15} />
+        </button>
+      </div>
+      <div className="pp-card flex flex-col gap-3 p-3.5">
+        <DraftOptions
+          tone={props.tone}
+          length={props.length}
+          onTone={props.onTone}
+          onLength={props.onLength}
+        />
+        {props.picker}
+        <p className="pp-faint text-[11px]">Change these, then Regenerate.</p>
+      </div>
       <div className="pp-card pp-card-glow flex flex-col gap-3 p-4">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-sm font-bold">
@@ -542,26 +692,6 @@ export function ResultView(props: {
         </div>
       ) : null}
 
-      <div className="pp-card flex flex-col gap-2.5 p-3.5">
-        <Segmented
-          label="Tone"
-          value={props.tone}
-          options={['friendly', 'professional', 'concise'] as const}
-          onChange={props.onTone}
-        />
-        <Segmented
-          label="Length"
-          value={props.length}
-          options={['short', 'medium'] as const}
-          onChange={props.onLength}
-        />
-        <p className="pp-faint text-[11px]">Change these, then Regenerate.</p>
-      </div>
-
-      <button type="button" className="pp-btn pp-btn-ghost pp-btn-sm self-start" onClick={props.onNewJob}>
-        <IconArrowLeft size={14} />
-        New job
-      </button>
     </section>
   );
 }

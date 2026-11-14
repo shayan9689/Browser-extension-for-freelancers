@@ -46,6 +46,8 @@ describe('panel state persistence', () => {
       status: 'ready',
       job,
       editedDescription: 'D',
+      toneChosen: true,
+      lengthChosen: true,
     });
   });
 

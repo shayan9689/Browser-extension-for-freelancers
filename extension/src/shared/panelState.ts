@@ -21,7 +21,14 @@ export type PanelState =
   | { status: 'conversation'; conversation: Conversation }
   | { status: 'analyzing'; conversation: Conversation; requestId: string }
   | { status: 'no-project'; conversation: Conversation; reason: string }
-  | { status: 'ready'; job: JobPost; editedDescription: string }
+  | {
+      status: 'ready';
+      job: JobPost;
+      editedDescription: string;
+      /** Tone and length must be picked for each job before generating. */
+      toneChosen?: boolean;
+      lengthChosen?: boolean;
+    }
   | {
       status: 'generating';
       job: JobPost;
@@ -36,6 +43,7 @@ export type PanelState =
       draft: string;
       tone: Tone;
       length: Length;
+      profileLabel?: string;
     }
   | {
       status: 'error';
@@ -88,7 +96,13 @@ export function restorableState(saved: PersistedPanel, now: number = Date.now())
   const { state } = saved;
   if (state.status === 'detecting') return { status: 'idle' };
   if (state.status === 'generating' && now - saved.updatedAt > GENERATING_STALE_MS) {
-    return { status: 'ready', job: state.job, editedDescription: state.editedDescription };
+    return {
+      status: 'ready',
+      job: state.job,
+      editedDescription: state.editedDescription,
+      toneChosen: true,
+      lengthChosen: true,
+    };
   }
   if (state.status === 'analyzing' && now - saved.updatedAt > GENERATING_STALE_MS) {
     return { status: 'conversation', conversation: state.conversation };

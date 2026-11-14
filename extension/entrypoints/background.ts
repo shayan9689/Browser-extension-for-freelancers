@@ -46,6 +46,7 @@ async function runGeneration(msg: GenerateMessage): Promise<void> {
       draft,
       tone: msg.tone,
       length: msg.length,
+      profileLabel: msg.profileLabel,
     });
     if (shown) {
       await addHistoryItem({
@@ -56,6 +57,8 @@ async function runGeneration(msg: GenerateMessage): Promise<void> {
         proposal: draft,
         priceAmount: result.suggested_price.amount,
         priceCurrency: result.suggested_price.currency,
+        profileId: msg.profileId,
+        profileLabel: msg.profileLabel,
       });
     }
   } catch (err) {
@@ -119,9 +122,10 @@ export default defineBackground(() => {
     });
 
     void (async () => {
+      // First install: open the welcome page with profile setup.
       const store = await loadStore();
-      if (details.reason === 'install' || !store.onboardingComplete) {
-        void chrome.runtime.openOptionsPage();
+      if (details.reason === 'install' && !store.onboardingComplete) {
+        void chrome.tabs.create({ url: chrome.runtime.getURL('/welcome.html') });
       }
     })();
   });

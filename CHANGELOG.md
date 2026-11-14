@@ -4,17 +4,34 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Welcome page on install with a 4-step profile setup wizard (niche, skills and achievements,
+  experience level and rate, writing style)
+- Multiple profiles, one per niche. The popup picks the best match for each job ("Applying as")
+  and you can switch; settings manage, edit and delete profiles
+- History saved per profile, with a filter by profile and the full draft in settings
+- "New proposal" and close buttons above a finished draft; when the open tab has a different
+  job, the popup offers to draft for it instead of showing only the old result
+- Tone and length are chosen first, at the top of the popup, before Generate is enabled;
+  full-width controls in a slightly wider popup (400px)
+- Popup has a fixed size (400x600): the header and progress bar stay pinned and the content
+  scrolls inside; each new screen starts at the top
+- Experience level (entry, intermediate, expert) with default rates of $10, $20 and $35/hr
+- `scripts/eval_prompts.py` with a golden set of 12 jobs and 6 chats for scoring prompts
+- `supabase/schema.sql` and `docs/supabase-setup.md` for upcoming cloud sync
+
 ### Changed
 
+- A complete profile (name, headline, 3 skills, one achievement, hourly rate) is required
+  before generating; the popup sends you to setup instead of drafting a generic proposal
+- Prices are estimated from working hours x your rate, and delivery days follow typical
+  marketplace turnarounds (prompt `2026-11-14.1`)
 - Proposal prompt v2 (`2026-11-13.6`): four short paragraphs (insight, proof, approach,
   question), honest about skills missing from the profile, no invented scope or numbers,
   no price in the draft text
 - Backend cleans punctuation (plain hyphens, quotes, spaces) and warns when a draft mentions
   timing not in the profile or the price looks like an hourly rate
-
-### Added
-
-- `scripts/eval_prompts.py` with a golden set of 12 jobs and 6 chats for scoring prompts
 
 ## [1.0.3] - 2026-11-13
 

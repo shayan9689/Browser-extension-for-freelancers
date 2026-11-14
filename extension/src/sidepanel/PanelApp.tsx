@@ -17,7 +17,13 @@ import {
   isFreshPending,
   isPendingSelection,
 } from '../shared/pending';
-import { loadStore, profileIsEmpty, type Profile } from '../shared/storage';
+import {
+  loadStore,
+  pickProfileForJob,
+  profileIsReady,
+  profileMissing,
+  type ProfileRecord,
+} from '../shared/storage';
 import type { Conversation, JobPost } from '../shared/types';
 import { jobFromText } from './jobFromText';
 import { usePanelStore, type PanelState } from './store';
@@ -25,6 +31,7 @@ import {
   AnalyzingView,
   ConversationView,
   DetectingView,
+  DraftOptions,
   ErrorView,
   Footer,
   GeneratingView,
@@ -32,8 +39,10 @@ import {
   Header,
   IdleView,
   JobReadyView,
+  NewJobBanner,
   NoProjectView,
   ProfileBanner,
+  ProfilePicker,
   ResultView,
   Stepper,
   type StepIndex,
@@ -124,20 +133,50 @@ function clearBadge() {
 }
 
 export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
-  const { state, setState, commit, hydrate, tone, length, setTone, setLength, forceStatus } =
-    usePanelStore();
+  const {
+    state,
+    setState,
+    commit,
+    hydrate,
+    tone,
+    length,
+    setTone,
+    setLength,
+    forceStatus,
+  } = usePanelStore();
   const [hydrated, setHydrated] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copiedQuestion, setCopiedQuestion] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [installId, setInstallId] = useState<string>('');
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profiles, setProfiles] = useState<ProfileRecord[]>([]);
+  const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
+  const [chosenProfileId, setChosenProfileId] = useState<string | null>(null);
+  const [newJob, setNewJob] = useState<JobPost | null>(null);
   const windowIdRef = useRef<number | null>(null);
+  const pickedForRef = useRef('');
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  const readyProfiles = useMemo(() => profiles.filter(profileIsReady), [profiles]);
+  const selectedProfile =
+    readyProfiles.find((p) => p.id === chosenProfileId) ??
+    readyProfiles.find((p) => p.id === activeProfileId) ??
+    readyProfiles[0] ??
+    null;
 
   const openSettings = useCallback(() => {
     void chrome.runtime.openOptionsPage();
   }, []);
+
+  /** Welcome page in setup mode; closes the popup so the tab is visible. */
+  const openSetup = useCallback(() => {
+    void chrome.tabs
+      .create({ url: chrome.runtime.getURL('/welcome.html?setup=1') })
+      .then(() => {
+        if (mode === 'popup') window.close();
+      });
+  }, [mode]);
 
   const applyText = useCallback(
     (text: string, url: string) => {
@@ -145,7 +184,10 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
       if (!job) {
         setState({
           status: 'error',
-          error: { code: 'EMPTY_SELECTION', message: `No text received. ${RIGHT_CLICK_HINT}` },
+          error: {
+            code: 'EMPTY_SELECTION',
+            message: `No text received. ${RIGHT_CLICK_HINT}`,
+          },
         });
         return;
       }
@@ -178,23 +220,26 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
       ]);
       if (cancelled) return;
       setInstallId(data.installId);
-      setProfile(data.profile);
+      setProfiles(data.profiles);
+      setActiveProfileId(data.activeProfileId);
       setProfileLoaded(true);
 
       const store = usePanelStore.getState();
+      const active = data.profiles.find((p) => p.id === data.activeProfileId);
       if (saved) {
         store.hydrate({ ...saved, state: restorableState(saved) });
-      } else if (data.profile) {
+      } else if (active) {
         store.hydrate({
           state: { status: 'idle' },
-          tone: data.profile.defaultTone,
-          length: data.profile.defaultLength,
+          tone: active.defaultTone,
+          length: active.defaultLength,
           updatedAt: 0,
         });
       }
       setHydrated(true);
 
-      if (takePending((session as Record<string, unknown>)[PENDING_SELECTION_KEY])) return;
+      if (takePending((session as Record<string, unknown>)[PENDING_SELECTION_KEY]))
+        return;
       if (mode !== 'popup') return;
 
       const now = usePanelStore.getState().state;
@@ -210,12 +255,24 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
       if (selected.trim()) {
         const job = jobFromText(selected, tabUrl);
         const same = job && currentJob(now)?.description === job.description;
-        if (job && !same && now.status !== 'result') {
+        if (job && !same && now.status === 'result') {
+          setNewJob(job); // offer it without replacing the finished draft
+        } else if (job && !same) {
           usePanelStore.getState().setState({
             status: 'ready',
             job,
             editedDescription: job.description,
           });
+        }
+        return;
+      }
+
+      if (now.status === 'result' && stateUrl(now) !== tabUrl) {
+        try {
+          const res = await sendToActiveTab({ type: 'GET_JOB_POST' });
+          if (!cancelled && res.type === 'JOB_POST') setNewJob(res.job);
+        } catch {
+          // no job on this tab
         }
         return;
       }
@@ -254,20 +311,41 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
       changes: Record<string, chrome.storage.StorageChange>,
       area: string,
     ) => {
-      if (area === 'local' && 'profile' in changes) {
-        setProfile((changes.profile.newValue as Profile | null | undefined) ?? null);
+      if (area === 'local' && ('profiles' in changes || 'activeProfileId' in changes)) {
+        void loadStore().then((data) => {
+          setProfiles(data.profiles);
+          setActiveProfileId(data.activeProfileId);
+        });
       }
       if (area !== 'session') return;
       const pending = changes[PENDING_SELECTION_KEY];
       if (pending?.newValue) takePending(pending.newValue);
       const panel: unknown = changes[PANEL_STATE_KEY]?.newValue;
-      if (isPersistedPanel(panel) && panel.updatedAt > usePanelStore.getState().updatedAt) {
+      if (
+        isPersistedPanel(panel) &&
+        panel.updatedAt > usePanelStore.getState().updatedAt
+      ) {
         hydrate(panel);
       }
     };
     chrome.storage.onChanged.addListener(onChanged);
     return () => chrome.storage.onChanged.removeListener(onChanged);
   }, [hydrate, takePending]);
+
+  // A new screen always starts at the top of the scroll area.
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [state.status]);
+
+  const shownJob = currentJob(state);
+  useEffect(() => {
+    if (!shownJob || readyProfiles.length === 0) return;
+    const key = `${shownJob.url}|${shownJob.title}`;
+    if (pickedForRef.current === key) return;
+    pickedForRef.current = key;
+    const best = pickProfileForJob(readyProfiles, shownJob, activeProfileId);
+    if (best) setChosenProfileId(best.id);
+  }, [shownJob, readyProfiles, activeProfileId]);
 
   // The side panel can only be opened synchronously inside a click, so
   // look the window up ahead of time.
@@ -364,11 +442,17 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
           return;
         }
 
-        setState({ status: 'error', error: { code: 'UNKNOWN', message: 'Unexpected response.' } });
+        setState({
+          status: 'error',
+          error: { code: 'UNKNOWN', message: 'Unexpected response.' },
+        });
       } catch {
         setState({
           status: 'error',
-          error: { code: 'PAGE_ACCESS', message: `Could not read the page. ${RIGHT_CLICK_HINT}` },
+          error: {
+            code: 'PAGE_ACCESS',
+            message: `Could not read the page. ${RIGHT_CLICK_HINT}`,
+          },
         });
       }
     },
@@ -382,6 +466,11 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
         ? state.editedDescription
         : job?.description;
     if (!job || editedDescription === undefined) return;
+    const profile = selectedProfile;
+    if (!profile) {
+      openSetup();
+      return;
+    }
 
     const requestId = crypto.randomUUID();
     // Save first: the worker only writes its result while this request is
@@ -395,7 +484,9 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
       editedDescription,
       tone,
       length,
-      signOff: profile?.signOff,
+      signOff: profile.signOff,
+      profileId: profile.id,
+      profileLabel: profile.label,
       payload: {
         install_id: installId || crypto.randomUUID(),
         job: {
@@ -406,13 +497,14 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
           skills: job.skills,
         },
         profile: {
-          name: profile?.name || 'Freelancer',
-          headline: profile?.headline || 'Independent contractor',
-          skills: profile?.skills ?? [],
-          years_experience: profile?.yearsExperience ?? 0,
-          hourly_rate: profile?.hourlyRate ?? null,
-          currency: profile?.currency ?? 'USD',
-          highlights: profile?.highlights ?? [],
+          name: profile.name,
+          headline: profile.headline,
+          skills: profile.skills,
+          years_experience: profile.yearsExperience,
+          hourly_rate: profile.hourlyRate,
+          currency: profile.currency,
+          highlights: profile.highlights,
+          experience_level: profile.experienceLevel,
         },
         options: { tone, length },
       },
@@ -423,12 +515,15 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
     } catch {
       setState({
         status: 'error',
-        error: { code: 'NETWORK', message: 'Could not start generation. Reload the extension.' },
+        error: {
+          code: 'NETWORK',
+          message: 'Could not start generation. Reload the extension.',
+        },
         job,
         editedDescription,
       });
     }
-  }, [commit, installId, length, profile, setState, state, tone]);
+  }, [commit, installId, length, openSetup, selectedProfile, setState, state, tone]);
 
   const checkConversation = useCallback(
     async (conversation: Conversation) => {
@@ -449,7 +544,10 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
       } catch {
         setState({
           status: 'error',
-          error: { code: 'NETWORK', message: 'Could not start the check. Reload the extension.' },
+          error: {
+            code: 'NETWORK',
+            message: 'Could not start the check. Reload the extension.',
+          },
         });
       }
     },
@@ -473,14 +571,30 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
       requestId: state.requestId,
     };
     void chrome.runtime.sendMessage(message).catch(() => undefined);
-    setState({ status: 'ready', job: state.job, editedDescription: state.editedDescription });
+    setState({
+      status: 'ready',
+      job: state.job,
+      editedDescription: state.editedDescription,
+      toneChosen: true,
+      lengthChosen: true,
+    });
   };
 
   const backToIdle = () => {
     if (state.status === 'generating') cancelGenerate();
     if (state.status === 'analyzing') cancelAnalysis();
+    setNewJob(null);
     setState({ status: 'idle' });
   };
+
+  const picker = (
+    <ProfilePicker
+      profiles={readyProfiles}
+      value={selectedProfile?.id ?? null}
+      onChange={setChosenProfileId}
+      onManage={openSettings}
+    />
+  );
 
   const openSidePanel = () => {
     const windowId = windowIdRef.current;
@@ -529,161 +643,215 @@ export default function PanelApp({ mode = 'sidepanel' }: { mode?: PanelMode }) {
   }, [state]);
 
   return (
-    <main
-      className={`flex flex-col gap-4 p-4 text-sm ${mode === 'sidepanel' ? 'min-h-screen' : ''}`}
-    >
+    <main className="pp-shell text-sm">
       <div aria-live="polite" className="sr-only">
         {liveRegion}
       </div>
 
-      <Header
-        onSettings={openSettings}
-        onOpenSidePanel={mode === 'popup' ? openSidePanel : undefined}
-      />
-      <Stepper active={activeStep(state)} />
+      {/* Pinned: never scrolls with the content. */}
+      <div className="pp-topbar">
+        <Header
+          onSettings={openSettings}
+          onOpenSidePanel={mode === 'popup' ? openSidePanel : undefined}
+        />
+        <Stepper active={activeStep(state)} />
+      </div>
 
-      {profileLoaded && profileIsEmpty(profile) ? <ProfileBanner onOpen={openSettings} /> : null}
+      <div className="pp-scroll" ref={scrollRef}>
+        {profileLoaded && readyProfiles.length === 0 ? (
+          <ProfileBanner
+            onOpen={openSetup}
+            missing={profiles[0] ? profileMissing(profiles[0]) : []}
+          />
+        ) : null}
 
-      {import.meta.env.DEV ? (
-        <label className="pp-faint flex items-center gap-2 text-xs">
-          Dev state
-          <select
-            className="pp-select !min-h-7 !w-auto !py-0 text-xs"
-            onChange={(e) => forceStatus(e.target.value as PanelState['status'])}
-            defaultValue=""
-          >
-            <option value="" disabled>
-              Switch…
-            </option>
-            {(['idle', 'detecting', 'ready', 'generating', 'result', 'error'] as const).map(
-              (s) => (
+        {newJob && state.status === 'result' ? (
+          <NewJobBanner
+            title={newJob.title}
+            onUse={() => {
+              setState({
+                status: 'ready',
+                job: newJob,
+                editedDescription: newJob.description,
+              });
+              setNewJob(null);
+            }}
+            onDismiss={() => setNewJob(null)}
+          />
+        ) : null}
+
+        {import.meta.env.DEV ? (
+          <label className="pp-faint flex items-center gap-2 text-xs">
+            Dev state
+            <select
+              className="pp-select !min-h-7 !w-auto !py-0 text-xs"
+              onChange={(e) => forceStatus(e.target.value as PanelState['status'])}
+              defaultValue=""
+            >
+              <option value="" disabled>
+                Switch…
+              </option>
+              {(
+                ['idle', 'detecting', 'ready', 'generating', 'result', 'error'] as const
+              ).map((s) => (
                 <option key={s} value={s}>
                   {s}
                 </option>
-              ),
-            )}
-          </select>
-        </label>
-      ) : null}
+              ))}
+            </select>
+          </label>
+        ) : null}
 
-      {!hydrated ? (
-        <DetectingView />
-      ) : (
-        <div key={state.status} className="pp-enter flex flex-col">
-          {state.status === 'idle' ? (
-            <IdleView
-              onDetect={() => void detectJob(false)}
-              onUseSelection={() => void detectJob(true)}
-              onPaste={pasteText}
-            />
-          ) : null}
+        {!hydrated ? (
+          <DetectingView />
+        ) : (
+          <div key={state.status} className="pp-enter flex flex-col">
+            {state.status === 'idle' ? (
+              <IdleView
+                onDetect={() => void detectJob(false)}
+                onUseSelection={() => void detectJob(true)}
+                onPaste={pasteText}
+              />
+            ) : null}
 
-          {state.status === 'detecting' ? <DetectingView /> : null}
+            {state.status === 'detecting' ? <DetectingView /> : null}
 
-          {state.status === 'conversation' ? (
-            <ConversationView
-              conversation={state.conversation}
-              onCheck={() => void checkConversation(state.conversation)}
-              onBack={backToIdle}
-            />
-          ) : null}
+            {state.status === 'conversation' ? (
+              <ConversationView
+                conversation={state.conversation}
+                onCheck={() => void checkConversation(state.conversation)}
+                onBack={backToIdle}
+              />
+            ) : null}
 
-          {state.status === 'analyzing' ? (
-            <AnalyzingView conversation={state.conversation} onCancel={cancelAnalysis} />
-          ) : null}
+            {state.status === 'analyzing' ? (
+              <AnalyzingView
+                conversation={state.conversation}
+                onCancel={cancelAnalysis}
+              />
+            ) : null}
 
-          {state.status === 'no-project' ? (
-            <NoProjectView
-              reason={state.reason}
-              onRecheck={() => void detectJob(false)}
-              onPaste={pasteText}
-            />
-          ) : null}
+            {state.status === 'no-project' ? (
+              <NoProjectView
+                reason={state.reason}
+                onRecheck={() => void detectJob(false)}
+                onPaste={pasteText}
+              />
+            ) : null}
 
-          {state.status === 'ready' ? (
-            <JobReadyView
-              job={state.job}
-              description={state.editedDescription}
-              onDescriptionChange={(value) =>
-                setState({ status: 'ready', job: state.job, editedDescription: value })
-              }
-              onGenerate={() => void runGenerate()}
-              onBack={backToIdle}
-            />
-          ) : null}
-
-          {state.status === 'generating' ? (
-            <GeneratingView job={state.job} onCancel={cancelGenerate} />
-          ) : null}
-
-          {state.status === 'result' ? (
-            <ResultView
-              draft={state.draft}
-              result={state.result}
-              tone={tone}
-              length={length}
-              copied={copied}
-              copiedQuestion={copiedQuestion}
-              onDraftChange={(draft) => {
-                setCopied(false);
-                setState({ ...state, draft });
-              }}
-              onTone={setTone}
-              onLength={setLength}
-              onCopy={async () => {
-                if (await copyText(state.draft)) {
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 1800);
+            {state.status === 'ready' ? (
+              <JobReadyView
+                job={state.job}
+                description={state.editedDescription}
+                onDescriptionChange={(value) =>
+                  setState({ ...state, editedDescription: value })
                 }
-              }}
-              onCopyQuestion={async (q) => {
-                if (await copyText(q)) {
-                  setCopiedQuestion(q);
-                  setTimeout(() => setCopiedQuestion(null), 1500);
+                options={
+                  <DraftOptions
+                    tone={state.toneChosen ? tone : null}
+                    length={state.lengthChosen ? length : null}
+                    onTone={(t) => {
+                      setTone(t);
+                      setState({ ...state, toneChosen: true });
+                    }}
+                    onLength={(l) => {
+                      setLength(l);
+                      setState({ ...state, lengthChosen: true });
+                    }}
+                  />
                 }
-              }}
-              onRegenerate={() => void runGenerate()}
-              onNewJob={backToIdle}
-            />
-          ) : null}
+                optionsReady={Boolean(state.toneChosen && state.lengthChosen)}
+                onGenerate={() => void runGenerate()}
+                onBack={backToIdle}
+                picker={picker}
+                canGenerate={readyProfiles.length > 0}
+                onSetup={openSetup}
+              />
+            ) : null}
 
-          {state.status === 'error' && GUIDE_CODES.has(state.error.code) ? (
-            <GuideView
-              title={errorTitle(state.error.code)}
-              message={state.error.message}
-              onRetry={() => void detectJob(false)}
-              onPaste={pasteText}
-            />
-          ) : null}
+            {state.status === 'generating' ? (
+              <GeneratingView job={state.job} onCancel={cancelGenerate} />
+            ) : null}
 
-          {state.status === 'error' && !GUIDE_CODES.has(state.error.code) ? (
-            <ErrorView
-              title={errorTitle(state.error.code)}
-              message={
-                state.error.code === 'RATE_LIMITED' && countdown !== null && countdown > 0
-                  ? `Too many requests. Try again in ${countdown}s.`
-                  : state.error.message
-              }
-              retryDisabled={
-                state.error.code === 'RATE_LIMITED' && countdown !== null && countdown > 0
-              }
-              onRetry={() => {
-                if (state.job) void runGenerate();
-                else void detectJob(false);
-              }}
-              extra={
-                state.job ? null : (
-                  <button type="button" className="pp-btn pp-btn-ghost pp-btn-sm" onClick={backToIdle}>
-                    Start over
-                  </button>
-                )
-              }
-            />
-          ) : null}
-        </div>
-      )}
+            {state.status === 'result' ? (
+              <ResultView
+                draft={state.draft}
+                result={state.result}
+                tone={tone}
+                length={length}
+                copied={copied}
+                copiedQuestion={copiedQuestion}
+                onDraftChange={(draft) => {
+                  setCopied(false);
+                  setState({ ...state, draft });
+                }}
+                onTone={setTone}
+                onLength={setLength}
+                onCopy={async () => {
+                  if (await copyText(state.draft)) {
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1800);
+                  }
+                }}
+                onCopyQuestion={async (q) => {
+                  if (await copyText(q)) {
+                    setCopiedQuestion(q);
+                    setTimeout(() => setCopiedQuestion(null), 1500);
+                  }
+                }}
+                onRegenerate={() => void runGenerate()}
+                onNewJob={backToIdle}
+                picker={readyProfiles.length > 1 ? picker : undefined}
+                profileLabel={state.profileLabel}
+              />
+            ) : null}
 
-      <Footer />
+            {state.status === 'error' && GUIDE_CODES.has(state.error.code) ? (
+              <GuideView
+                title={errorTitle(state.error.code)}
+                message={state.error.message}
+                onRetry={() => void detectJob(false)}
+                onPaste={pasteText}
+              />
+            ) : null}
+
+            {state.status === 'error' && !GUIDE_CODES.has(state.error.code) ? (
+              <ErrorView
+                title={errorTitle(state.error.code)}
+                message={
+                  state.error.code === 'RATE_LIMITED' &&
+                  countdown !== null &&
+                  countdown > 0
+                    ? `Too many requests. Try again in ${countdown}s.`
+                    : state.error.message
+                }
+                retryDisabled={
+                  state.error.code === 'RATE_LIMITED' &&
+                  countdown !== null &&
+                  countdown > 0
+                }
+                onRetry={() => {
+                  if (state.job) void runGenerate();
+                  else void detectJob(false);
+                }}
+                extra={
+                  state.job ? null : (
+                    <button
+                      type="button"
+                      className="pp-btn pp-btn-ghost pp-btn-sm"
+                      onClick={backToIdle}
+                    >
+                      Start over
+                    </button>
+                  )
+                }
+              />
+            ) : null}
+          </div>
+        )}
+
+        <Footer />
+      </div>
     </main>
   );
 }

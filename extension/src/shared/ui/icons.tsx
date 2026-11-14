@@ -207,3 +207,47 @@ export const IconPanelRight = (p: IconProps) => (
     <path d="M15 3v18" />
   </Base>
 );
+
+export const IconArrowRight = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M5 12h14" />
+    <path d="m12 5 7 7-7 7" />
+  </Base>
+);
+
+export const IconBriefcase = (p: IconProps) => (
+  <Base {...p}>
+    <rect x="2" y="7" width="20" height="14" rx="2" />
+    <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+    <path d="M2 13h20" />
+  </Base>
+);
+
+export const IconEdit = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+  </Base>
+);
+
+export const IconLayers = (p: IconProps) => (
+  <Base {...p}>
+    <path d="m12 2 10 5-10 5L2 7Z" />
+    <path d="m2 17 10 5 10-5" />
+    <path d="m2 12 10 5 10-5" />
+  </Base>
+);
+
+export const IconPin = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M12 17v5" />
+    <path d="M9 10.76V6h6v4.76a2 2 0 0 0 1.11 1.79l1.78.9A2 2 0 0 1 19 15.24V17H5v-1.76a2 2 0 0 1 1.11-1.79l1.78-.9A2 2 0 0 0 9 10.76Z" />
+    <path d="M8 6h8" />
+  </Base>
+);
+
+export const IconZap = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M13 2 3 14h9l-1 8 10-12h-9z" />
+  </Base>
+);

@@ -11,6 +11,9 @@ export type GenerateMessage = {
   tone: Tone;
   length: Length;
   signOff?: string;
+  /** Profile used, saved with the draft in history. */
+  profileId?: string;
+  profileLabel?: string;
 };
 
 export type AnalyzeMessage = {
