@@ -214,7 +214,34 @@ export async function upsertProfile(record: ProfileRecord): Promise<StoredData> 
   });
 }
 
+export const CLOUD_TOMBSTONES_KEY = 'cloudTombstones';
+
+/** Local deletes waiting to be sent to the cloud (see cloud.ts). */
+export type CloudTombstones = { profiles: string[]; history: string[] };
+
+export async function readTombstones(): Promise<CloudTombstones> {
+  const data = await chrome.storage.local.get(CLOUD_TOMBSTONES_KEY);
+  const t = data[CLOUD_TOMBSTONES_KEY] as Partial<CloudTombstones> | undefined;
+  return { profiles: t?.profiles ?? [], history: t?.history ?? [] };
+}
+
+export async function recordDeletes(kind: keyof CloudTombstones, ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const t = await readTombstones();
+  t[kind] = [...new Set([...t[kind], ...ids])];
+  await chrome.storage.local.set({ [CLOUD_TOMBSTONES_KEY]: t });
+}
+
+/** Remove drafts from history (and from the cloud on the next sync). */
+export async function deleteHistoryItems(ids: string[]): Promise<StoredData> {
+  const current = await loadStore();
+  const remove = new Set(ids);
+  await recordDeletes('history', ids);
+  return saveStore({ history: current.history.filter((h) => !remove.has(h.id)) });
+}
+
 export async function deleteProfile(id: string): Promise<StoredData> {
+  await recordDeletes('profiles', [id]);
   const current = await loadStore();
   const profiles = current.profiles.filter((p) => p.id !== id);
   const activeProfileId =

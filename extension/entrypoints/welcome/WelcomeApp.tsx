@@ -7,6 +7,8 @@ import {
   upsertProfile,
   type ProfileRecord,
 } from '../../src/shared/storage';
+import { currentUser, syncNow } from '../../src/shared/cloud';
+import { GoogleButton, signInAndSync } from '../../src/shared/ui/AccountCard';
 import { Meter } from '../../src/shared/ui/form';
 import {
   IdentitySection,
@@ -37,32 +39,33 @@ import {
 
 type View = 'landing' | 'setup' | 'done';
 
-const STEPS: { key: ProfileSection; title: string; subtitle: string; icon: ReactNode }[] = [
-  {
-    key: 'identity',
-    title: 'Who are you?',
-    subtitle: 'Name this profile after your niche. You can add more profiles later.',
-    icon: <IconUser />,
-  },
-  {
-    key: 'skills',
-    title: 'Skills and proof',
-    subtitle: 'Drafts only use what you write here, so be specific and honest.',
-    icon: <IconSparkles />,
-  },
-  {
-    key: 'rate',
-    title: 'Experience and rate',
-    subtitle: 'Used to suggest a fair price and a competitive delivery time.',
-    icon: <IconTag />,
-  },
-  {
-    key: 'style',
-    title: 'Writing style',
-    subtitle: 'Your defaults. You can still change them for each draft.',
-    icon: <IconSettings />,
-  },
-];
+const STEPS: { key: ProfileSection; title: string; subtitle: string; icon: ReactNode }[] =
+  [
+    {
+      key: 'identity',
+      title: 'Who are you?',
+      subtitle: 'Name this profile after your niche. You can add more profiles later.',
+      icon: <IconUser />,
+    },
+    {
+      key: 'skills',
+      title: 'Skills and proof',
+      subtitle: 'Drafts only use what you write here, so be specific and honest.',
+      icon: <IconSparkles />,
+    },
+    {
+      key: 'rate',
+      title: 'Experience and rate',
+      subtitle: 'Used to suggest a fair price and a competitive delivery time.',
+      icon: <IconTag />,
+    },
+    {
+      key: 'style',
+      title: 'Writing style',
+      subtitle: 'Your defaults. You can still change them for each draft.',
+      icon: <IconSettings />,
+    },
+  ];
 
 const FEATURES = [
   {
@@ -108,12 +111,40 @@ export default function WelcomeApp() {
   const [errors, setErrors] = useState<ProfileErrors>({});
   const [saving, setSaving] = useState(false);
   const [profiles, setProfiles] = useState<ProfileRecord[]>([]);
+  const [signedIn, setSignedIn] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
+  const [signInError, setSignInError] = useState('');
+
+  useEffect(() => {
+    void currentUser().then((u) => setSignedIn(Boolean(u)));
+  }, []);
+
+  /** Sign in with Google and pull profiles saved on another computer. */
+  const restore = async () => {
+    setSigningIn(true);
+    setSignInError('');
+    const message = await signInAndSync();
+    setSigningIn(false);
+    if (message) {
+      setSignInError(message);
+      return;
+    }
+    setSignedIn(true);
+    const data = await loadStore();
+    setProfiles(data.profiles);
+    if (view === 'done') return;
+    setView('landing');
+    scrollTop();
+  };
 
   useEffect(() => {
     void loadStore().then((data) => {
       setProfiles(data.profiles);
       const params = new URLSearchParams(window.location.search);
-      if (params.get('setup') === '1') {
+      if (params.get('setup') === 'new') {
+        setProfile(newProfileRecord());
+        setView('setup');
+      } else if (params.get('setup') === '1') {
         // Opened from the popup: finish an incomplete profile, or start a new one.
         const unfinished = data.profiles.find((p) => !profileIsReady(p));
         if (unfinished) setProfile(unfinished);
@@ -155,6 +186,7 @@ export default function WelcomeApp() {
       setStep(Math.max(0, firstBad));
       return;
     }
+    void syncNow();
     setView('done');
     scrollTop();
   };
@@ -162,7 +194,7 @@ export default function WelcomeApp() {
   return (
     <div className="min-h-screen">
       <nav className="pp-nav">
-        <div className="pp-page flex h-16 items-center gap-3">
+        <div className="pp-nav-inner flex h-16 items-center gap-3">
           <div className="pp-logo">
             <IconLogo size={22} />
           </div>
@@ -193,7 +225,31 @@ export default function WelcomeApp() {
       </nav>
 
       {view === 'landing' ? (
-        <Landing hasReady={hasReady} onStart={() => startSetup(hasReady)} />
+        <Landing
+          hasReady={hasReady}
+          onStart={() => startSetup(hasReady)}
+          signIn={
+            signedIn ? null : (
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap items-center gap-3">
+                  <GoogleButton
+                    onClick={() => void restore()}
+                    busy={signingIn}
+                    label="Restore with Google"
+                  />
+                  <span className="pp-faint text-xs">
+                    Already set up on another computer?
+                  </span>
+                </div>
+                {signInError ? (
+                  <p className="text-xs text-[var(--pp-danger)]" role="alert">
+                    {signInError}
+                  </p>
+                ) : null}
+              </div>
+            )
+          }
+        />
       ) : null}
 
       {view === 'setup' ? (
@@ -204,7 +260,9 @@ export default function WelcomeApp() {
                 <p className="pp-label">
                   Step {step + 1} of {STEPS.length}
                 </p>
-                <h1 className="mt-1 text-2xl font-bold tracking-tight">Set up your profile</h1>
+                <h1 className="mt-1 text-2xl font-bold tracking-tight">
+                  Set up your profile
+                </h1>
               </div>
               <Meter value={profileCompleteness(profile)} size={44} />
             </div>
@@ -221,14 +279,19 @@ export default function WelcomeApp() {
               ))}
             </ol>
 
-            <section key={current.key} className="pp-card pp-card-glow pp-enter flex flex-col gap-5 p-6">
+            <section
+              key={current.key}
+              className="pp-card pp-card-glow pp-enter flex flex-col gap-5 p-6"
+            >
               <div className="flex items-start gap-3">
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[var(--pp-brand-soft)] text-[var(--pp-brand-strong)]">
                   {current.icon}
                 </span>
                 <div>
                   <h2 className="text-lg font-bold tracking-tight">{current.title}</h2>
-                  <p className="pp-muted text-[13px] leading-relaxed">{current.subtitle}</p>
+                  <p className="pp-muted text-[13px] leading-relaxed">
+                    {current.subtitle}
+                  </p>
                 </div>
               </div>
               {current.key === 'identity' ? (
@@ -261,7 +324,10 @@ export default function WelcomeApp() {
               </button>
               <div className="flex-1" />
               {Object.keys(errors).length > 0 ? (
-                <span className="text-xs font-semibold text-[var(--pp-danger)]" role="alert">
+                <span
+                  className="text-xs font-semibold text-[var(--pp-danger)]"
+                  role="alert"
+                >
                   Please fix the fields above
                 </span>
               ) : null}
@@ -272,7 +338,11 @@ export default function WelcomeApp() {
                 onClick={() => void next()}
               >
                 {step === STEPS.length - 1 ? 'Finish setup' : 'Continue'}
-                {step === STEPS.length - 1 ? <IconCheck size={16} /> : <IconArrowRight size={16} />}
+                {step === STEPS.length - 1 ? (
+                  <IconCheck size={16} />
+                ) : (
+                  <IconArrowRight size={16} />
+                )}
               </button>
             </div>
           </div>
@@ -280,7 +350,34 @@ export default function WelcomeApp() {
       ) : null}
 
       {view === 'done' ? (
-        <Done profile={profile} onAnother={() => startSetup(true)} />
+        <Done
+          profile={profile}
+          onAnother={() => startSetup(true)}
+          backup={
+            signedIn ? (
+              <p className="pp-notice pp-notice-info text-xs">
+                Backed up to your account. Your profiles and history sync across your
+                browsers.
+              </p>
+            ) : (
+              <div className="pp-card flex w-full max-w-3xl flex-wrap items-center gap-4 p-5 text-left">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-bold">Back up your profile</h3>
+                  <p className="pp-muted text-xs leading-relaxed">
+                    Sign in to keep your profiles and proposal history safe and use them
+                    on any computer. Optional.
+                  </p>
+                  {signInError ? (
+                    <p className="mt-1 text-xs text-[var(--pp-danger)]" role="alert">
+                      {signInError}
+                    </p>
+                  ) : null}
+                </div>
+                <GoogleButton onClick={() => void restore()} busy={signingIn} />
+              </div>
+            )
+          }
+        />
       ) : null}
 
       <footer className="pp-page pp-faint flex flex-wrap items-center justify-center gap-x-4 gap-y-1 py-10 text-xs">
@@ -301,7 +398,7 @@ export default function WelcomeApp() {
   );
 }
 
-function Landing(props: { hasReady: boolean; onStart: () => void }) {
+function Landing(props: { hasReady: boolean; onStart: () => void; signIn: ReactNode }) {
   return (
     <main className="pp-enter">
       <section className="pp-page grid items-center gap-12 py-16 md:grid-cols-[1.1fr_0.9fr] md:py-24">
@@ -311,19 +408,26 @@ function Landing(props: { hasReady: boolean; onStart: () => void }) {
             {props.hasReady ? 'Welcome back' : 'Installed. You are almost ready'}
           </span>
           <h1 className="pp-hero-title">
-            Proposals that sound like <span className="pp-gradient-text">you</span>, in seconds.
+            Proposals that sound like <span className="pp-gradient-text">you</span>, in
+            seconds.
           </h1>
           <p className="pp-muted max-w-xl text-[17px] leading-relaxed">
-            ProposalPilot reads the job you are viewing and writes a short, specific first draft
-            from your real experience, with a fair price and delivery time. You edit and send it.
+            ProposalPilot reads the job you are viewing and writes a short, specific first
+            draft from your real experience, with a fair price and delivery time. You edit
+            and send it.
           </p>
           <div className="flex flex-wrap items-center gap-3">
-            <button type="button" className="pp-btn pp-btn-primary pp-btn-lg" onClick={props.onStart}>
+            <button
+              type="button"
+              className="pp-btn pp-btn-primary pp-btn-lg"
+              onClick={props.onStart}
+            >
               {props.hasReady ? 'Add another profile' : 'Set up your profile'}
               <IconArrowRight size={16} />
             </button>
             <span className="pp-faint text-xs">Takes about 2 minutes. Free.</span>
           </div>
+          {props.signIn}
         </div>
         <DraftMock />
       </section>
@@ -331,7 +435,9 @@ function Landing(props: { hasReady: boolean; onStart: () => void }) {
       <section className="pp-page flex flex-col gap-8 py-12">
         <div className="max-w-2xl">
           <p className="pp-label">Why freelancers use it</p>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight">Less typing. Better first impressions.</h2>
+          <h2 className="mt-2 text-3xl font-bold tracking-tight">
+            Less typing. Better first impressions.
+          </h2>
         </div>
         <div className="pp-stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f) => (
@@ -348,8 +454,16 @@ function Landing(props: { hasReady: boolean; onStart: () => void }) {
         <div className="pp-card pp-card-glow grid gap-8 p-8 md:grid-cols-3">
           {[
             ['1', 'Set up a profile', 'Your niche, skills, achievements and rate. Once.'],
-            ['2', 'Open a job', 'Click the toolbar icon or press Alt+Shift+P on any job post.'],
-            ['3', 'Copy and send', 'Review the draft, tweak it, and paste it into your proposal.'],
+            [
+              '2',
+              'Open a job',
+              'Click the toolbar icon or press Alt+Shift+P on any job post.',
+            ],
+            [
+              '3',
+              'Copy and send',
+              'Review the draft, tweak it, and paste it into your proposal.',
+            ],
           ].map(([n, title, text]) => (
             <div key={n} className="flex flex-col gap-2">
               <span className="pp-gradient-text text-4xl font-extrabold">{n}</span>
@@ -361,11 +475,17 @@ function Landing(props: { hasReady: boolean; onStart: () => void }) {
       </section>
 
       <section className="pp-page flex flex-col items-center gap-4 py-16 text-center">
-        <h2 className="text-3xl font-bold tracking-tight">Ready to write your next proposal?</h2>
+        <h2 className="text-3xl font-bold tracking-tight">
+          Ready to write your next proposal?
+        </h2>
         <p className="pp-muted max-w-lg text-[15px]">
           Your profile stays in your browser and is sent only when you generate a draft.
         </p>
-        <button type="button" className="pp-btn pp-btn-primary pp-btn-lg" onClick={props.onStart}>
+        <button
+          type="button"
+          className="pp-btn pp-btn-primary pp-btn-lg"
+          onClick={props.onStart}
+        >
           {props.hasReady ? 'Add another profile' : 'Set up your profile'}
           <IconArrowRight size={16} />
         </button>
@@ -385,11 +505,16 @@ function DraftMock() {
         <span className="pp-badge ml-auto">92 words</span>
       </div>
       <div className="flex flex-col gap-3 rounded-xl bg-[var(--pp-surface-2)] p-4 text-[12.5px] leading-relaxed">
-        <p>Losing mobile buyers before the gallery loads is usually a theme problem, not hosting.</p>
+        <p>
+          Losing mobile buyers before the gallery loads is usually a theme problem, not
+          hosting.
+        </p>
         <p className="pp-muted">
           I rebuilt the product page of a fashion store on Dawn and halved its load time.
         </p>
-        <p className="pp-muted">I would start by profiling which scripts block the first paint.</p>
+        <p className="pp-muted">
+          I would start by profiling which scripts block the first paint.
+        </p>
         <p className="font-semibold">Which theme is the store running at the moment?</p>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-2">
@@ -406,7 +531,11 @@ function DraftMock() {
   );
 }
 
-function Done(props: { profile: ProfileRecord; onAnother: () => void }) {
+function Done(props: {
+  profile: ProfileRecord;
+  onAnother: () => void;
+  backup: ReactNode;
+}) {
   return (
     <main className="pp-page pp-enter flex flex-col items-center gap-8 py-16 text-center">
       <span className="pp-feature-icon pp-pop !h-16 !w-16 !rounded-2xl">
@@ -415,7 +544,10 @@ function Done(props: { profile: ProfileRecord; onAnother: () => void }) {
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight">You are all set</h1>
         <p className="pp-muted max-w-lg text-[15px] leading-relaxed">
-          Your <span className="font-semibold text-[var(--pp-text)]">{props.profile.label}</span>{' '}
+          Your{' '}
+          <span className="font-semibold text-[var(--pp-text)]">
+            {props.profile.label}
+          </span>{' '}
           profile is ready. Here is how to write your first proposal.
         </p>
       </div>
@@ -435,8 +567,9 @@ function Done(props: { profile: ProfileRecord; onAnother: () => void }) {
           </span>
           <h3 className="text-sm font-bold">Open a job</h3>
           <p className="pp-muted text-xs leading-relaxed">
-            On Upwork or Fiverr, click the icon or press <span className="pp-kbd">Alt</span>+
-            <span className="pp-kbd">Shift</span>+<span className="pp-kbd">P</span>.
+            On Upwork or Fiverr, click the icon or press{' '}
+            <span className="pp-kbd">Alt</span>+<span className="pp-kbd">Shift</span>+
+            <span className="pp-kbd">P</span>.
           </p>
         </div>
         <div className="pp-card flex flex-col gap-2 p-5">
@@ -445,10 +578,12 @@ function Done(props: { profile: ProfileRecord; onAnother: () => void }) {
           </span>
           <h3 className="text-sm font-bold">Any other site</h3>
           <p className="pp-muted text-xs leading-relaxed">
-            Highlight the job text, right-click and choose Draft proposal with ProposalPilot.
+            Highlight the job text, right-click and choose Draft proposal with
+            ProposalPilot.
           </p>
         </div>
       </div>
+      {props.backup}
       <div className="flex flex-wrap justify-center gap-3">
         <a
           className="pp-btn pp-btn-primary pp-btn-lg"
@@ -459,7 +594,11 @@ function Done(props: { profile: ProfileRecord; onAnother: () => void }) {
           Find a job on Upwork
           <IconArrowRight size={16} />
         </a>
-        <button type="button" className="pp-btn pp-btn-secondary pp-btn-lg" onClick={props.onAnother}>
+        <button
+          type="button"
+          className="pp-btn pp-btn-secondary pp-btn-lg"
+          onClick={props.onAnother}
+        >
           Add another niche profile
         </button>
       </div>

@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file.
   experience level and rate, writing style)
 - Multiple profiles, one per niche. The popup picks the best match for each job ("Applying as")
   and you can switch; settings manage, edit and delete profiles
+- Settings open as a full page in a tab, styled like the welcome page (navigation, workspace
+  summary); "New profile" opens the same 4-step setup wizard
 - History saved per profile, with a filter by profile and the full draft in settings
 - "New proposal" and close buttons above a finished draft; when the open tab has a different
   job, the popup offers to draft for it instead of showing only the old result
@@ -18,8 +20,11 @@ All notable changes to this project will be documented in this file.
 - Popup has a fixed size (400x600): the header and progress bar stay pinned and the content
   scrolls inside; each new screen starts at the top
 - Experience level (entry, intermediate, expert) with default rates of $10, $20 and $35/hr
+- Optional cloud sync with Google sign-in (Supabase): profiles and history are backed up and
+  merged across browsers, deletes sync too, and a new computer can "Restore with Google"
+  from the welcome page. New `identity` permission, used only for the sign-in window
 - `scripts/eval_prompts.py` with a golden set of 12 jobs and 6 chats for scoring prompts
-- `supabase/schema.sql` and `docs/supabase-setup.md` for upcoming cloud sync
+- `supabase/schema.sql` and `docs/supabase-setup.md` (tables with row level security)
 
 ### Changed
 

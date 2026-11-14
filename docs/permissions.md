@@ -7,6 +7,7 @@
 | `activeTab` | Granted when the user opens the popup or uses the right-click item: read the active tab URL and the selected text | Selected text can't be read on sites other than Fiverr/Upwork |
 | `scripting` | `executeScript` to read `window.getSelection()` after the user invokes the extension on a page | “Use selected text” stops working on non-matched pages |
 | `contextMenus` | Adds one right-click item, “Draft proposal with ProposalPilot”, shown only when text is selected. Chrome passes the selected text to the extension, which opens the popup with it | Users on sites other than Fiverr/Upwork must paste the job text manually |
+| `identity` | Optional Google sign-in for cloud sync: `chrome.identity.launchWebAuthFlow` opens Google's sign-in window and returns to the extension. Used only when the user clicks "Sign in with Google" | Profiles and history can't be backed up or synced between computers |
 | `https://www.fiverr.com/*` (content script) | Inject read-only extractor on Fiverr job pages the user opens | Fiverr auto-detection fails |
 | `https://www.upwork.com/*` (content script) | Inject read-only extractor on Upwork job pages the user opens | Upwork auto-detection fails |
 

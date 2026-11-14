@@ -59,7 +59,14 @@ if (!existsSync(manifestPath)) {
 }
 
 // Keep in sync with docs/permissions.md; new permissions need a store justification.
-const ALLOWED_PERMISSIONS = new Set(['storage', 'sidePanel', 'activeTab', 'scripting', 'contextMenus']);
+const ALLOWED_PERMISSIONS = new Set([
+  'storage',
+  'sidePanel',
+  'activeTab',
+  'scripting',
+  'contextMenus',
+  'identity',
+]);
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
 const unexpected = [
   ...(manifest.permissions ?? []).filter((p) => !ALLOWED_PERMISSIONS.has(p)),
@@ -78,8 +85,11 @@ function walk(dir) {
     if (statSync(p).isDirectory()) walk(p);
     else {
       const text = readFileSync(p, 'utf8');
-      if (text.includes('localhost') && !name.endsWith('.map')) {
-        console.error(`Found localhost in ${p}`);
+      // Our dev API URL must never ship. (Libraries such as supabase-js
+      // mention "localhost" in their own defaults, which is fine.)
+      const devApi = /(localhost|127\.0\.0\.1):8000/;
+      if (devApi.test(text) && !name.endsWith('.map')) {
+        console.error(`Found the dev API URL in ${p}`);
         rmSync(dest, { recursive: true, force: true });
         process.exit(1);
       }

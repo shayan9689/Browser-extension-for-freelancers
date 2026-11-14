@@ -14,6 +14,7 @@ import {
   PENDING_SELECTION_KEY,
   type PendingSelection,
 } from '../src/shared/pending';
+import { syncNow } from '../src/shared/cloud';
 import { addHistoryItem, loadStore } from '../src/shared/storage';
 
 /** In-flight generations, so the UI can cancel them. */
@@ -60,6 +61,7 @@ async function runGeneration(msg: GenerateMessage): Promise<void> {
         profileId: msg.profileId,
         profileLabel: msg.profileLabel,
       });
+      void syncNow(); // back up the new draft when signed in
     }
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') return;

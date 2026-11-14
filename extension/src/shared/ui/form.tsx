@@ -8,9 +8,13 @@ export function Card(props: {
   aside?: ReactNode;
   children: ReactNode;
   className?: string;
+  id?: string;
 }) {
   return (
-    <section className={`pp-card flex flex-col gap-4 p-5 ${props.className ?? ''}`}>
+    <section
+      id={props.id}
+      className={`pp-card flex scroll-mt-24 flex-col gap-4 p-5 ${props.className ?? ''}`}
+    >
       <div className="flex items-start gap-3">
         {props.icon ? (
           <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[var(--pp-brand-soft)] text-[var(--pp-brand-strong)]">
@@ -48,7 +52,9 @@ export function Field({
     <div className="flex flex-col gap-1.5">
       <label htmlFor={id} className="pp-label">
         {label}
-        {required ? <span className="ml-0.5 text-[var(--pp-brand-strong)]">*</span> : null}
+        {required ? (
+          <span className="ml-0.5 text-[var(--pp-brand-strong)]">*</span>
+        ) : null}
       </label>
       {children(id)}
       {error ? (
@@ -98,7 +104,14 @@ export function Meter(props: { value: number; size?: number }) {
             <stop offset="1" stopColor="#0ea5e9" />
           </linearGradient>
         </defs>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--pp-border)" strokeWidth="4" />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke="var(--pp-border)"
+          strokeWidth="4"
+        />
         <circle
           cx={size / 2}
           cy={size / 2}
