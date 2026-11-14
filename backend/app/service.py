@@ -18,6 +18,7 @@ from app.schemas import (
     ConversationRequest,
     ProposalRequest,
     ProposalResponse,
+    ScreeningAnswer,
     SuggestedPrice,
 )
 
@@ -84,11 +85,29 @@ def tidy_text(text: str) -> str:
     return "\n\n".join(paragraphs)
 
 
+# Only "listed/mentioned in my profile": dropping it never changes the sentence's meaning.
+_PROFILE_MENTION = re.compile(r"\s*\b(?:listed|mentioned) (?:in|on) my profile\b", re.I)
+
+
+def _client_facing(text: str) -> str:
+    """Answers are pasted to the client: drop references to "my profile"."""
+    return re.sub(r"\s+([,.;])", r"\1", _PROFILE_MENTION.sub("", text)).strip()
+
+
 def _post_check(response: ProposalResponse, request: ProposalRequest) -> ProposalResponse:
     response.proposal = tidy_text(response.proposal)
     response.questions_to_ask = [tidy_text(q) for q in response.questions_to_ask]
     response.suggested_price.rationale = tidy_text(response.suggested_price.rationale)
     warnings = [tidy_text(w) for w in response.warnings]
+    # One answer per asked question, in order, with the client's exact wording.
+    asked = request.job.questions
+    answers = [a for a in response.answers if a.answer.strip()][: len(asked)]
+    response.answers = [
+        ScreeningAnswer(question=asked[i], answer=_client_facing(tidy_text(a.answer)))
+        for i, a in enumerate(answers)
+    ]
+    if len(response.answers) < len(asked):
+        warnings.append("Some screening questions were not answered. Answer them yourself.")
     text = response.proposal.lower()
     for phrase in BANNED_PHRASES:
         if phrase in text:
@@ -101,9 +120,13 @@ def _post_check(response: ProposalResponse, request: ProposalRequest) -> Proposa
     ):
         warnings.append("Proposal may claim experience not in profile.")
     highlights = " ".join(request.profile.highlights).lower()
-    timing = re.search(r"\b(recently|last (?:week|month|year)|this year)\b", text)
-    if timing and timing.group(1) not in highlights:
-        warnings.append(f'Draft says "{timing.group(1)}", which is not in your profile. Check it.')
+    answer_text = " ".join(a.answer for a in response.answers).lower()
+    for label, body in (("Draft", text), ("An answer", answer_text)):
+        timing = re.search(r"\b(recently|last (?:week|month|year)|this year)\b", body)
+        if timing and timing.group(1) not in highlights:
+            warnings.append(
+                f'{label} says "{timing.group(1)}", which is not in your profile. Check it.'
+            )
     budget = (request.job.budget_text or "").lower()
     hourly_job = bool(re.search(r"hour|/hr|per hr", budget))
     rate = request.profile.hourly_rate
@@ -153,6 +176,7 @@ def generate_proposal(request: ProposalRequest, provider: Provider) -> ProposalR
         or DEFAULT_HOURLY_RATE[request.profile.experience_level],
         "currency": request.profile.currency,
         "highlights": request.profile.highlights,
+        "availability": request.profile.availability or "not specified",
     }
     user_prompt = build_user_prompt(
         job_title=request.job.title,
@@ -163,6 +187,7 @@ def generate_proposal(request: ProposalRequest, provider: Provider) -> ProposalR
         profile=profile,
         tone=request.options.tone,
         length=request.options.length,
+        questions=request.job.questions,
     )
 
     if isinstance(provider, FakeProvider):

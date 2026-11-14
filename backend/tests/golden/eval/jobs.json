@@ -18,7 +18,11 @@
         "Python",
         "PostgreSQL"
       ],
-      "description": "We run a small SaaS for yoga teachers built on FastAPI + PostgreSQL. Today customers pay once via Stripe Checkout. We want monthly and yearly subscriptions instead.\n\nScope:\n- Create Products/Prices in Stripe and a Checkout flow for subscriptions\n- Handle webhooks (invoice.paid, customer.subscription.updated/deleted) and keep our users table in sync\n- Customer portal link so users can cancel or change plan\n- Keep existing one-time customers active until their access ends\n\nPlease mention a similar Stripe integration you have done. Tests are a plus. We'd like this live within 2 weeks."
+      "description": "We run a small SaaS for yoga teachers built on FastAPI + PostgreSQL. Today customers pay once via Stripe Checkout. We want monthly and yearly subscriptions instead.\n\nScope:\n- Create Products/Prices in Stripe and a Checkout flow for subscriptions\n- Handle webhooks (invoice.paid, customer.subscription.updated/deleted) and keep our users table in sync\n- Customer portal link so users can cancel or change plan\n- Keep existing one-time customers active until their access ends\n\nPlease mention a similar Stripe integration you have done. Tests are a plus. We'd like this live within 2 weeks.",
+      "questions": [
+        "Describe a similar Stripe integration you have done.",
+        "How soon can you start?"
+      ]
     },
     "max_days": 14
   },
@@ -166,7 +170,11 @@
         "Figma",
         "Web design"
       ],
-      "description": "Our clinic website looks dated and isn't mobile friendly. We want a fresh design in Figma first, then built in Webflow. About 6 pages: home, services, team, pricing, blog, contact with booking form. We have photos and copy.\n\nPlease share 2-3 Webflow sites you've designed. Would like to launch in 4 weeks."
+      "description": "Our clinic website looks dated and isn't mobile friendly. We want a fresh design in Figma first, then built in Webflow. About 6 pages: home, services, team, pricing, blog, contact with booking form. We have photos and copy.\n\nPlease share 2-3 Webflow sites you've designed. Would like to launch in 4 weeks.",
+      "questions": [
+        "Please share links to 2-3 Webflow sites you designed.",
+        "What is your design process?"
+      ]
     },
     "max_days": 14
   },
@@ -252,7 +260,10 @@
         "Dart",
         "Firebase"
       ],
-      "description": "We need an experienced Flutter developer (3+ years) to build a fitness tracking app for iOS and Android: workout logging, progress charts, Firebase auth and push reminders. Designs are ready in Figma. Please share apps you've published on the App Store / Play Store."
+      "description": "We need an experienced Flutter developer (3+ years) to build a fitness tracking app for iOS and Android: workout logging, progress charts, Firebase auth and push reminders. Designs are ready in Figma. Please share apps you've published on the App Store / Play Store.",
+      "questions": [
+        "How many years of Flutter experience do you have?"
+      ]
     },
     "max_days": 45
   },

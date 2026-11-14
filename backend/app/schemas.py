@@ -10,6 +10,8 @@ class JobInput(BaseModel):
     description: str = Field(min_length=1, max_length=12_000)
     budget_text: str | None = Field(default=None, max_length=200)
     skills: list[str] = Field(default_factory=list, max_length=30)
+    # Screening questions the client asks on the application form (optional).
+    questions: list[str] = Field(default_factory=list, max_length=10)
 
     @field_validator("title", "description", "budget_text", mode="before")
     @classmethod
@@ -25,6 +27,16 @@ class JobInput(BaseModel):
     def limit_skill_lengths(cls, value: list[str]) -> list[str]:
         return [s[:80] for s in value][:30]
 
+    @field_validator("questions")
+    @classmethod
+    def clean_questions(cls, value: list[str]) -> list[str]:
+        cleaned = []
+        for q in value:
+            q = "".join(ch for ch in q if ord(ch) >= 32).strip()
+            if q:
+                cleaned.append(q[:500])
+        return cleaned
+
 
 class ProfileInput(BaseModel):
     name: str = Field(min_length=1, max_length=120)
@@ -36,6 +48,7 @@ class ProfileInput(BaseModel):
     highlights: list[str] = Field(default_factory=list, max_length=5)
     # Optional so older extension versions keep working.
     experience_level: Literal["entry", "intermediate", "expert"] = "intermediate"
+    availability: str | None = Field(default=None, max_length=200)
 
 
 class OptionsInput(BaseModel):
@@ -56,12 +69,23 @@ class SuggestedPrice(BaseModel):
     rationale: str
 
 
+class ScreeningAnswer(BaseModel):
+    question: str
+    answer: str
+
+
 class ProposalResponse(BaseModel):
     proposal: str
     suggested_price: SuggestedPrice
     delivery_days: int
     questions_to_ask: list[str]
     warnings: list[str] = Field(default_factory=list)
+    answers: list[ScreeningAnswer] = Field(default_factory=list)
+
+    @field_validator("answers", mode="before")
+    @classmethod
+    def coerce_answers(cls, value: object) -> object:
+        return [] if value is None else value
 
     @field_validator("questions_to_ask", "warnings", mode="before")
     @classmethod
@@ -84,6 +108,7 @@ PROPOSAL_JSON_SCHEMA: dict = {
         "delivery_days",
         "questions_to_ask",
         "warnings",
+        "answers",
     ],
     "properties": {
         "proposal": {"type": "string"},
@@ -100,6 +125,18 @@ PROPOSAL_JSON_SCHEMA: dict = {
         "delivery_days": {"type": "integer"},
         "questions_to_ask": {"type": "array", "items": {"type": "string"}},
         "warnings": {"type": "array", "items": {"type": "string"}},
+        "answers": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["question", "answer"],
+                "properties": {
+                    "question": {"type": "string"},
+                    "answer": {"type": "string"},
+                },
+            },
+        },
     },
 }
 
